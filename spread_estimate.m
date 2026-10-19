@@ -42,25 +42,35 @@ function R = spread_estimate(cfg, raw)
     M = spread_model(x, S, cfg);
 
     % ---- scores ----
+    % Charts always cover APP and PEPP; events not used in the estimation are out of sample.
     R.cfg = cfg; R.x = x; R.info = info; R.runtime = toc(t0);
     R.MSE = M.MSE;
+    allEv = {'APP', 'PEPP'};
+    if numel(cfg.events) == numel(allEv)
+        Sc = S; Mc = M;
+    else
+        cfgc = cfg; cfgc.events = allEv;
+        Sc = spread_prepare(cfgc, raw); Mc = spread_model(x, Sc, cfgc);
+    end
     bp = 1e4;
     R.chart.maturities = 5:10;
+    R.fittedEvents = cfg.events;
     rmse_all = [];
     for c = {'DE', 'IT'}
         cty = c{1};
-        for e = 1:numel(cfg.events)
-            ev = cfg.events{e};
-            o = S.target.(cty)(:, e) * bp; f = M.fit.(cty)(:, e) * bp;
+        for e = 1:numel(allEv)
+            ev = allEv{e};
+            o = Sc.target.(cty)(:, e) * bp; f = Mc.fit.(cty)(:, e) * bp;
             R.chart.(cty).([ev '_observed']) = o'; R.chart.(cty).([ev '_fitted']) = f';
             R.rmse.([cty '_' ev]) = sqrt(mean((o - f).^2));
             rmse_all = [rmse_all; o - f];  %#ok<AGROW>
         end
         R.yieldRMSE.(cty) = sqrt(mean(M.eY.(cty)(:).^2)) * bp;
     end
+    R.chartRMSE = sqrt(mean(rmse_all.^2));                % bp, all 24 chart points (APP and PEPP, DE and IT)
     % IT-DE spread: reactions and yield fit
-    for e = 1:numel(cfg.events)
-        ev = cfg.events{e};
+    for e = 1:numel(allEv)
+        ev = allEv{e};
         o = R.chart.IT.([ev '_observed']) - R.chart.DE.([ev '_observed']);
         f = R.chart.IT.([ev '_fitted'])   - R.chart.DE.([ev '_fitted']);
         R.chart.SP.([ev '_observed']) = o; R.chart.SP.([ev '_fitted']) = f;
@@ -80,7 +90,7 @@ function R = spread_estimate(cfg, raw)
 
     if ~exist(cfg.outDir, 'dir'), mkdir(cfg.outDir); end
     save(fullfile(cfg.outDir, [cfg.name '.mat']), 'R');
-    write_chart_csv(fullfile(cfg.outDir, [cfg.name '_chart.csv']), R, cfg);
+    write_chart_csv(fullfile(cfg.outDir, [cfg.name '_chart.csv']), R, allEv);
     fprintf('%-60s chartRMSE %6.2f bp | DE APP %5.1f PEPP %5.1f | IT APP %5.1f PEPP %5.1f | spread APP %5.1f PEPP %5.1f | yields DE %5.1f IT %5.1f spread %5.1f bp | spread/pp %5.1f..%5.1f bp | min default int. %8.2e | ok %d | it %d flag %d | %4.0f s\n', ...
             cfg.name, R.chartRMSE, R.rmse.DE_APP, R.rmse.DE_PEPP, R.rmse.IT_APP, R.rmse.IT_PEPP, R.rmse.SP_APP, R.rmse.SP_PEPP, R.yieldRMSE.DE, R.yieldRMSE.IT, R.yieldRMSE.SP, ...
             min(R.spreadLoading_bp_per_pp), max(R.spreadLoading_bp_per_pp), R.minIntensity, R.signOK, info.iterations, info.exitflag, R.runtime);
@@ -92,12 +102,12 @@ function r = residuals(z, x0, free, S, cfg)
     r = M.r;
 end
 
-function write_chart_csv(file, R, cfg)
+function write_chart_csv(file, R, evs)
     fid = fopen(file, 'w');
     fprintf(fid, 'country,event,maturity,observed_pp,fitted_pp\n');
     for c = {'DE', 'IT', 'SP'}
-        for e = 1:numel(cfg.events)
-            ev = cfg.events{e}; o = R.chart.(c{1}).([ev '_observed']); f = R.chart.(c{1}).([ev '_fitted']);
+        for e = 1:numel(evs)
+            ev = evs{e}; o = R.chart.(c{1}).([ev '_observed']); f = R.chart.(c{1}).([ev '_fitted']);
             for k = 1:6
                 fprintf(fid, '%s,%s,%d,%.6f,%.6f\n', c{1}, ev, k + 4, o(k)/100, f(k)/100);
             end
