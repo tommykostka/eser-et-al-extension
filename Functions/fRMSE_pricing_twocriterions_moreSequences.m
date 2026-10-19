@@ -2,7 +2,7 @@
 % Objective Function: RMSE averaged acrossed all maturities
 %
 %
-function [MSE, MSE_yields, MSE_changesyields, AX, BX, vLambda0, mLambda1] = fRMSE_pricing_twocriterions_moreSequences(w, mX, mChangesYields, m_uSeq, EstimationData, param, vLambda)
+function [MSE, MSE_yields, dSum_MSEYieldChanges_Events, AX, BX, vLambda0, mLambda1] = fRMSE_pricing_twocriterions_moreSequences(w, mX, mChangesYields, m_uSeq, EstimationData, param, vLambda)
 
     T               = length(EstimationData.Yields);
     N               = length(param.K0P);
@@ -27,7 +27,7 @@ function [MSE, MSE_yields, MSE_changesyields, AX, BX, vLambda0, mLambda1] = fRMS
     
     % Identify how many event sequences are there
     nEvents = size(mChangesYields, 2); % each column is a vector of observed yield changes upon an event
-    dSum_YieldChanges_Events = 0;
+    dSum_MSEYieldChanges_Events = 0;
     
     MSE_changesyields =[];    
     for iEevent = 1:nEvents
@@ -36,12 +36,12 @@ function [MSE, MSE_yields, MSE_changesyields, AX, BX, vLambda0, mLambda1] = fRMS
         vErrors_ChangesYields   = mChangesYields(:,iEevent) - fYieldsImpact_uSequence(vMaturities_YCfit,v_uSeq, BX_all', param.K1P_level);
         MSE_changesyields       = sum(power(vErrors_ChangesYields,2));
         %dSum_YieldChanges_Events = dSum_YieldChanges_Events + 1/nEvents*w*MSE_changesyields; % all events receive equal weight in the total weight of the sum of errors of changes in yields
-        dSum_YieldChanges_Events = dSum_YieldChanges_Events + 1/nEvents*MSE_changesyields; % all events receive equal weight in the total weight of the sum of errors of changes in yields
+        dSum_MSEYieldChanges_Events = dSum_MSEYieldChanges_Events + 1/nEvents*MSE_changesyields; % all events receive equal weight in the total weight of the sum of errors of changes in yields
         
     end
     
     
     % Weighting of the two parts of the objective function
 %     MSE                = w * MSE_yields + w/2* MSE_changesyields + w/2* MSE_changesyields
-    MSE                = w * MSE_yields + dSum_YieldChanges_Events
+    MSE                = w * MSE_yields + (1-w)*dSum_MSEYieldChanges_Events;
     

@@ -6,14 +6,20 @@ close all;
 
 sOutputDirectory    = 'Output_mat\';
 sInputDirectory     = 'Input_mat\'; % Output wrt to this code but will be input to the main analysis
+% DirectoryFactorsBig4    = '\\gimecb01\data\ECB business areas\DGE\DMP\CMT\Analytical tools\TSMAPP\';
+% DirectoryFactorIta = '\\gimecb01\data\ECB business areas\DGE\DMP\CMT\Analytical tools\TSMAPP\Model presentation\WGEM presentation\Countrydata\';
+DirectoryFactorsBig4    = '..\..\';
+DirectoryFactorIta = '..\Countrydata\';
 
 addpath(genpath([cd '\']));
+
+table = 0 ; %change here if you want to print the results in the table (for calibration)
 
 
 %%  Estimation specifications
 
 sStartSample_TS_Estimation  = 'Mar2009'; %1999, 2014
-sEndSample_TS_Estimation    = 'Dec2021'; %  Dec2021
+sEndSample_TS_Estimation    = 'Dec2021'; %  Dec2021 
 %sEndSample_TS_Estimation    = 'Mar2015'; %  Dec2021
 sEndInSample                = 'Mar2015';
 
@@ -75,7 +81,8 @@ cP_OIS_fullsample = OIS_rates_fullsample*W';   % T*N % principal components ("cP
 
 %% Free-float (big4) data
 
-[Data_Quantity, Header_FreeFloat] = xlsread('Data\Free_Float.xlsx', 'Big4_free-float(Dec-21)');
+% [Data_Quantity, Header_FreeFloat] = xlsread('Data\Free_Float.xlsx', 'Big4_free-float(Dec-21)');
+[Data_Quantity, Header_FreeFloat] = xlsread([DirectoryFactorsBig4 'Input_MSY_debt_and_free_float.xlsx'], 'Mar-15');
 vDates_FreeFloat = datenum(Header_FreeFloat(2:end,1), 'dd/mm/yyyy');
 
 indexStartSample_estimation_FreeFloat   = find(strcmp(cellstr(datestr(vDates_FreeFloat, 'mmmyyyy')), sStartSample_TS_Estimation), 1, 'first');
@@ -100,7 +107,8 @@ vQuantity_FullSample    = Data_Quantity(indexStartSample_estimation_FreeFloat:in
 
 %% Unweighted Italian free float
 %
-[Data_debt, Header_debt] = xlsread('Data\Free_Float.xlsx', 'unweighted_IT_freefloat'); %Deviations_ITFF_unw');
+% [Data_debt, Header_debt] = xlsread('Data\Free_Float.xlsx', 'unweighted_IT_freefloat'); 
+[Data_debt, Header_debt] = xlsread([DirectoryFactorIta '2015_03_SIMULATIONBaseline.xlsx'], 'IT'); 
 vDates_debt = datenum(Header_debt(2:end,1), 'dd/mm/yyyy');
 
 indexStartSample_estimation_debt   = find(strcmp(cellstr(datestr(vDates_debt, 'mmmyyyy')), sStartSample_TS_Estimation), 1, 'first');
@@ -238,11 +246,11 @@ for ii=1:length(countries); cty=countries{ii};
     %         cP_vsDE_fullsample.(cty) = cP_fullsample.(cty) - cP_fullsample.DE;
     
     %%  Pricing factors
-    mX.(cty) = [cP_OIS_o vQuantity_Estimation];
+    mX.(cty) = [cP_OIS_o vQuantity_Estimation]; % OIS and the free-float
     %mX.(cty) = [cP_o.DE vQuantity_Estimation];
     
     if strcmp(cty, 'IT')
-        mX.(cty) = [mX.(cty) cP_vsOIS_o.(cty) vDebt];
+        mX.(cty) = [mX.(cty) cP_vsOIS_o.(cty) vDebt]; 
         %             mX.(cty) = [mX.(cty) cP_vsOIS_o.(cty)];
         %             mX.(cty) = [mX.DE cP_vsOIS_o.(cty) vDebt];
         %mX.(cty) = [mX.DE cP_vsDE_o.(cty) vDebt];
@@ -353,21 +361,28 @@ mChangesYields.IT = [vChangesYields_APP.IT(EstimationData_i.IT.mats_YCfit); vCha
 %     mChangesYields.IT = [vChangesYields_PEPP.IT(EstimationData_i.IT.mats_YCfit)]';
 
 % useries and spreads changes for IT
-[Data_Quantityseq, Header_FreeFloat] = xlsread('Data\Free_Float.xlsx', 'Deviations_ITFF_unw');
+[Data_Quantityseq, Header_FreeFloat] = xlsread('Data\Free_Float.xlsx', 'Deviations_ITFF_unw_v2');
 
+uSequence.IT(:,:,1) = [uSequence.IT(:,1:end-1,1) Data_Quantityseq(1:120,1)];
+uSequence.IT(:,:,2) = [uSequence.IT(:,1:end-1,2) Data_Quantityseq(61:180,2)];
 
-uSequenceSpread.IT(:,:,1) = [zeros(120,5), Data_Quantityseq(1:120,1) ];
-uSequenceSpread.IT(:,:,2) = [zeros(120,5), Data_Quantityseq(61:180,2) ];
+% uSequenceSpread.IT(:,:,1) = [zeros(120,5), Data_Quantityseq(1:120,1) ];
+% uSequenceSpread.IT(:,:,2) = [zeros(120,5), Data_Quantityseq(61:180,2) ];
 
 % mChangesSpreads.IT = [vChangesYields_APP.IT(EstimationData_i.IT.mats_YCfit) - vChangesYields_APP.DE(EstimationData_i.DE.mats_YCfit);...
 %     vChangesYields_PEPP.IT(EstimationData_i.IT.mats_YCfit)- vChangesYields_PEPP.DE(EstimationData_i.DE.mats_YCfit)]';
-mChangesSpreads.IT = [vChangesYields_APP.IT(EstimationData_i.IT.mats_YCfit) ;...
-    vChangesYields_PEPP.IT(EstimationData_i.IT.mats_YCfit)]';
+% mChangesSpreads.IT = [vChangesYields_APP.IT(EstimationData_i.IT.mats_YCfit) ;...
+%     vChangesYields_PEPP.IT(EstimationData_i.IT.mats_YCfit)]';
 
 % mChangesSpreads.IT = [vChangesYields_APP.IT(EstimationData_i.IT.mats_YCfit) - vChangesYields_APP.DE(EstimationData_i.DE.mats_YCfit)]';
 
 
 %%  Dual optimization problem
+
+% drop usequence
+
+%uSequence.IT(:,:,2) =[];uSequence.DE(:,:,2) =[]; 
+%mChangesYields.DE(:,2) = [];mChangesYields.IT(:,2) = [];
 
 
 %     % Specify the objective function - both the APP and PEPP event
@@ -385,7 +400,8 @@ mChangesSpreads.IT = [vChangesYields_APP.IT(EstimationData_i.IT.mats_YCfit) ;...
 %    Estim_0 = 0.1*[Estim_DE; Estim_IT];
 
 %mChangesYields.DE=[]; mChangesYields.IT=[];
-obj_fun         = @(vEstimate) Estimate_multicountry_2(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, mChangesSpreads, uSequenceSpread, vEstimate);
+% obj_fun         = @(vEstimate) Estimate_multicountry_2(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, mChangesSpreads, uSequenceSpread, vEstimate);
+obj_fun         = @(vEstimate) Estimate_multicountry_3(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, vEstimate);
 
 vLambda0_DE        = [param_OIS_0.Lambda_0; vec([param_OIS_0.Lambda_1 [0.11; -0.02]])]; %for DE
 %     vLambda0.IT        = [0.11*ones(N_estimation+1,1) ; param_OIS_0.Lambda_0; param_OIS_0.Lambda_0; vec(param_OIS_0.Lambda_1); 0.11*ones(6,1); vec(param_OIS_0.Lambda_1); 0.11*ones(6,1)]; %for IT
@@ -399,7 +415,9 @@ vLambda0        = [0.11*ones(N_estimation.IT+1,1) ; ...     these are the params
 
 Estim_0 = vLambda0;
 
-[MSE_fun_0, Fy, Fdy]  = Estimate_multicountry_2(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, mChangesSpreads, uSequenceSpread, Estim_0);
+% [MSE_fun_0, Fy, Fdy]                         = Estimate_multicountry_2(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, mChangesSpreads, uSequenceSpread, Estim_0);
+% [MSE, MSE_yields, MSE_changesyields, AX, BX] = Estimate_multicountry_2(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, mChangesSpreads, uSequenceSpread, Estim_0);
+[MSE, MSE_yields, MSE_changesyields, AX, BX]   = Estimate_multicountry_3(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, Estim_0);
 
 % Start with the fmincon and then run also a fminunc (which also gives accurate Gradient and Hessian)
 %     problem = createOptimProblem('fmincon','objective',obj_fun,'x0',Estim_0);
@@ -417,14 +435,16 @@ Estim_0 = vLambda0;
 
 % Seting up optimization function
 options         = optimset('display', 'off', 'TolX', 10^-25, 'TolFun',10^-25);
-LB              = -100*ones(length(Estim_0),1);
-UB              = 100*ones(length(Estim_0),1);
+LB              = -100*ones(length(Estim_0),1); LB(1:6,1)=0;
+UB              = 100*ones(length(Estim_0),1);  UB(1:6,1)=0;
 [Estim_1, fval]  = fmincon(@(Z) obj_fun(Z), Estim_0, [], [], [], [], LB,UB,[],options);
 [Estim_final_fminunc,FVAL_fminunc,EXITFLAG_fminunc,OUTPUT_fminunc,GRAD_fminunc,HESSIAN_fminunc] = fminunc(@(Z) obj_fun(Z), Estim_1, options);
 
 Estim_final=Estim_final_fminunc;
 %     Estim_final=Estim_final_gs;
 
+% [MSE, MSE_yields, MSE_changesyields, AX, BX] =Estimate_multicountry_2(w, param_i, EstimationData_i, mX, uSequence, mChangesYields, mChangesSpreads, uSequenceSpread, Estim_final);
+[MSE, MSE_yields, MSE_changesyields, AX, BX] =Estimate_multicountry_3(w, param_i, EstimationData_i, mX, uSequence, mChangesYields,  Estim_final);
 
 % [MSE_DE, MSE_yields.DE, MSE_changesyields.DE, AX.DE, BX.DE] = fRMSE_pricing_twocriterions_moreSequences(w, mX.DE, mChangesYields.DE, uSequence.DE, EstimationData_i.DE, param_i.DE, Estim_final(1:8));
 
@@ -439,7 +459,6 @@ param_i.IT.Gamma_0          = Estim_final(1);
 param_i.IT.Gamma_1          = Estim_final(2:N_estimation.IT+1);
 N_eser                  = 3; %risk factors priced in eser et al
 
-
 param_i.IT.Lambda_0         = [Estim_final(N_estimation.IT+4: N_estimation.IT+5); 0 ; Estim_final(N_estimation.IT+2: N_estimation.IT+3); 0];
 param_i.IT.Lambda_1         = [reshape(Estim_final(N_estimation.IT+6:N_estimation.IT+17), 2, N_estimation.IT) ; zeros(1, N_estimation.IT); reshape(Estim_final(N_estimation.IT+18:end), 2, N_estimation.IT) ; ; zeros(1, N_estimation.IT)];
 
@@ -447,66 +466,70 @@ param_i.DE.Lambda_0         = [Estim_final(N_estimation.IT+4: N_estimation.IT+5)
 param_i.DE.Lambda_1         = [reshape(Estim_final(N_estimation.IT+6:N_estimation.IT+11), N_OIS, N_eser); zeros(1,N_eser)];
 
 
-for ii=1:2;cty=countries{ii};
-    
-    N_estimation=length(param_i.(cty).Lambda_0);
-    
-    param_i.(cty).K0Q              = param_i.(cty).K0P - param_i.(cty).Omega_chol * param_i.(cty).Lambda_0;
-    param_i.(cty).K1Q              = param_i.(cty).K1P - param_i.(cty).Omega_chol * param_i.(cty).Lambda_1;
-    param_i.(cty).K1Q_level        = param_i.(cty).K1Q + eye(N_estimation);   % KN added
-    
-    if strcmp(cty, 'IT') %with default
-        [BX_estimated, AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence_wDefault(EstimationData_i.(cty).mats_TSfit / EstimationData_i.(cty).dt, param_i.(cty).K0Q, param_i.(cty).K1Q_level, param_i.(cty).Omega_square, ...
-            param_i.(cty).rho0 * EstimationData_i.(cty).dt, param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt, param_i.(cty).Gamma_0, param_i.(cty).Gamma_1);
-    else
-        [BX_estimated, AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence(EstimationData_i.(cty).mats_TSfit / EstimationData_i.(cty).dt, param_i.(cty).K0Q, param_i.(cty).K1Q, param_i.(cty).Omega_square, ...
-            param_i.(cty).rho0 * EstimationData_i.(cty).dt, param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt);
+    for ii=1:2
         
-    end
-    
-    
-    param_i.(cty).BX_estimated = BX_estimated;
-    param_i.(cty).AX_estimated = AX_estimated;
-    
-    % Computing the fit of the yields over the TS window
-    yields_m                = ones(T,1)*AX_estimated + mX.(cty) * BX_estimated; % (T+1)*J, model-implied yields
-    %yields_m_FullSample     = ones(T_fullSample,1)*AX_estimated + mX_FullSample.(cty) * BX_estimated; % (T+1)*J, model-implied yields
-    
-    figure()
-    for i = 1:10
-        %       plot([yields_m(:,i) EstimationData_i.(cty).YieldsFullSample(:,i)]*100)
-        plot([yields_m(:,i) EstimationData_i.(cty).Yields(:,i)]*100)
-        title([cty, num2str(i)])
-        pause(1)
-    end
-    
-    % Plot Contribution of the 3rd factor
-    mContribution_Q          = mX.(cty)(:,3) * BX_estimated(3,:);
-    mContribution_LS         = mX.(cty)(:,1:2) * BX_estimated(1:2,:);
-    if strcmp(cty, 'IT')
-        mContribution_F_IT       = mX.(cty)(:,6) * BX_estimated(6,:);
+        cty=countries{ii};
+        
+        N_estimation=length(param_i.(cty).Lambda_0);
+        
+        param_i.(cty).K0Q              = param_i.(cty).K0P - param_i.(cty).Omega_chol * param_i.(cty).Lambda_0;
+        param_i.(cty).K1Q              = param_i.(cty).K1P - param_i.(cty).Omega_chol * param_i.(cty).Lambda_1;
+        param_i.(cty).K1Q_level        = param_i.(cty).K1Q + eye(N_estimation);   % KN added
+        
+        if strcmp(cty, 'IT') %with default
+            [BX_estimated, AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence_wDefault(EstimationData_i.(cty).mats_TSfit / EstimationData_i.(cty).dt, param_i.(cty).K0Q, param_i.(cty).K1Q_level, param_i.(cty).Omega_square, ...
+                param_i.(cty).rho0 * EstimationData_i.(cty).dt, param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt, param_i.(cty).Gamma_0, param_i.(cty).Gamma_1);
+        else
+            [BX_estimated, AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence(EstimationData_i.(cty).mats_TSfit / EstimationData_i.(cty).dt, param_i.(cty).K0Q, param_i.(cty).K1Q, param_i.(cty).Omega_square, ...
+                param_i.(cty).rho0 * EstimationData_i.(cty).dt, param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt);
+            
+        end
+        
+        
+        param_i.(cty).BX_estimated = BX_estimated;
+        param_i.(cty).AX_estimated = AX_estimated;
+        
+        % Computing the fit of the yields over the TS window
+        yields_m                = ones(T,1)*AX_estimated + mX.(cty) * BX_estimated; % (T+1)*J, model-implied yields
+        %yields_m_FullSample     = ones(T_fullSample,1)*AX_estimated + mX_FullSample.(cty) * BX_estimated; % (T+1)*J, model-implied yields
         
         figure()
-        plot([yields_fullsample.(cty)(:,end) mContribution_F_IT(:,end)]*100)
-        title([cty, num2str(i)])
+        for i = 1:10
+            %       plot([yields_m(:,i) EstimationData_i.(cty).YieldsFullSample(:,i)]*100)
+            plot([yields_m(:,i) EstimationData_i.(cty).Yields(:,i)]*100)
+            title([cty, num2str(i)])
+            pause(1)
+        end
+        
+        % Plot Contribution of the 3rd factor
+        mContribution_Q          = mX.(cty)(:,3) * BX_estimated(3,:);
+        mContribution_LS         = mX.(cty)(:,1:2) * BX_estimated(1:2,:);
+        if strcmp(cty, 'IT')
+            mContribution_F_IT       = mX.(cty)(:,6) * BX_estimated(6,:);
+            
+            figure()
+            plot([yields_fullsample.(cty)(:,end) mContribution_F_IT(:,end) mContribution_Q(:,end)  mContribution_F_IT(:,end) + mContribution_Q(:,end)  ]*100)
+            legend('yields', 'free-float', 'credit-risk', 'free-float + credit-risk')
+            title([cty, num2str(i)])
+        else
+            figure()
+            plot([yields_fullsample.(cty)(:,end) mContribution_Q(:,end)]*100)
+            title([cty, num2str(i)])
+            legend('yields', 'free-float')
+        end
+
+        param_i.(cty).vRMSE_TS            = sqrt(mean(power(EstimationData_i.(cty).Yields - yields_m,2)))*10000;
         
     end
-    figure()
-    plot([yields_fullsample.(cty)(:,end) mContribution_Q(:,end)]*100)
-    title([cty, num2str(i)])
-    
-    
-    
-    
-end
 
+    
 % Plot Contribution of the 3rd factor
 %mContribution_Q          = mX_FullSample(:,3) * BX_estimated(3,:);
 %mContribution_LS         = mX_FullSample(:,1:2) * BX_estimated(1:2,:);
 
 %plot([yields_m_FullSample(:,end) mContribution_Q(:,end)]*100)
 
-%vRMSE_TS            = sqrt(mean(power(EstimationData.Yields - yields_m,2)))*10000
+
 %     vRMSE_TS            = sqrt(mean(power(EstimationData.Yields - mContribution_LS(1:66,:),2)))*10000
 %vRMSE_FullSample    = sqrt(mean(power(EstimationData.YieldsFullSample - yields_m_FullSample,2)))*10000
 
@@ -517,63 +540,62 @@ end
 
 
 %%  Fit of the changes in DE yields over the APP period
-%for ii=1:length(countries); cty=countries{ii};
-%    cty='DE'
-%    vChangesYields_APP_m   = fYieldsImpact_uSequence(EstimationData_i.(cty).mats_YCfit / EstimationData_i.(cty).dt, uSequence.(cty)(:,:,1),...
-%        fATSMDiscrete_YieldLoadingsRecurrence_BX(1:EstimationData_i.(cty).mats_YCfit(end)/EstimationData_i.(cty).dt, param_i.(cty).K1Q,param_i.(cty).rho1*EstimationData_i(cty)DE.dt, EstimationData_i.(cty).dt)', param_i.(cty).K1P_level);
-
-%    figure
-%    plot([5:10],[vChangesYields_APP.(cty)(5:10)' vChangesYields_APP_m]*100)
-%    legend('observed', 'fitted')
-
-%end
-
-%%  Fit of the changes in DE yields over the APP and PEPP period
-
-cty='DE';
-BX.(cty) = fATSMDiscrete_YieldLoadingsRecurrence_BX_Lambda(1:EstimationData_i.(cty).mats_YCfit(end), param_i.(cty).K1P, param_i.(cty).Lambda_1, param_i.(cty).Omega_square ,param_i.(cty).rho1*EstimationData_i.(cty).dt,EstimationData_i.(cty).dt)';
-vChangesYields_APP_m   = fYieldsImpact_uSequence(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,1),...
-    BX.(cty),  param_i.(cty).K1P_level);
-
-ChangesYields_APP_m.(cty) = vChangesYields_APP_m;
-
-figure
-plot([5:10],[vChangesYields_APP.(cty)(5:10)' ChangesYields_APP_m.(cty)]*100)
-legend('observed', 'fitted')
-
-vChangesYields_PEPP_m   = fYieldsImpact_uSequence(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,2),...
-    BX.(cty),  param_i.(cty).K1P_level);
-
-ChangesYields_PEPP_m.(cty) = vChangesYields_PEPP_m;
-
-figure
-plot([5:10],[vChangesYields_PEPP.(cty)(5:10)' ChangesYields_PEPP_m.(cty)]*100)
-legend('observed', 'fitted')
-
+% for ii=1:length(countries); cty=countries{ii};
+%     cty='DE'
+%     vChangesYields_APP_m   = fYieldsImpact_uSequence(EstimationData_i.(cty).mats_YCfit / EstimationData_i.(cty).dt, uSequence.(cty)(:,:,1),...
+%         fATSMDiscrete_YieldLoadingsRecurrence_BX(1:EstimationData_i.(cty).mats_YCfit(end)/EstimationData_i.(cty).dt, param_i.(cty).K1Q,param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt)', param_i.(cty).K1P_level);
+% 
+%     figure
+%     plot([5:10],[vChangesYields_APP.(cty)(5:10)' vChangesYields_APP_m]*100)
+%     legend('observed', 'fitted')
+% 
+% end
+% 
+% %%  Fit of the changes in DE yields over the APP and PEPP period
+% 
+%  cty='DE';
+%  BX.(cty) = fATSMDiscrete_YieldLoadingsRecurrence_BX_Lambda(1:EstimationData_i.(cty).mats_YCfit(end), param_i.(cty).K1P, param_i.(cty).Lambda_1, param_i.(cty).Omega_square ,param_i.(cty).rho1*EstimationData_i.(cty).dt,EstimationData_i.(cty).dt)';
+%  vChangesYields_APP_m   = fYieldsImpact_uSequence(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,1),...
+%      BX.(cty),  param_i.(cty).K1P_level);
+% 
+%  ChangesYields_APP_m.(cty) = vChangesYields_APP_m;
+% 
+%  figure
+%  plot([5:10],[vChangesYields_APP.(cty)(5:10)' ChangesYields_APP_m.(cty)]*100)
+%  legend('observed', 'fitted')
+% 
+%  vChangesYields_PEPP_m   = fYieldsImpact_uSequence(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,2),...
+%      BX.(cty),  param_i.(cty).K1P_level);
+% 
+%  ChangesYields_PEPP_m.(cty) = vChangesYields_PEPP_m;
+% 
+%  figure
+%  plot([5:10],[vChangesYields_PEPP.(cty)(5:10)' ChangesYields_PEPP_m.(cty)]*100)
+%  legend('observed', 'fitted')
+% 
 
 %%  Fit of the changes in IT yields over the APP and PEPP period
-
-cty='IT';
-BX.(cty) = fATSMDiscrete_YieldLoadingsRecurrence_BX_Gamma(1:EstimationData_i.(cty).mats_YCfit(end), param_i.(cty).K1P_level, param_i.(cty).Lambda_1, param_i.(cty).Omega_square ,param_i.(cty).rho1*EstimationData_i.(cty).dt,EstimationData_i.(cty).dt, param_i.(cty).Gamma_1)';
-
-vChangesYields_APP_m  = fYieldsImpact_uSequence_wSpread(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,1),...
-    BX.(cty),  param_i.(cty).K1P_level, param_i.(cty).Gamma_1);
-
-ChangesYields_APP_m.(cty) = vChangesYields_APP_m;
-
-figure
-plot([5:10],[vChangesYields_APP.(cty)(5:10)' ChangesYields_APP_m.(cty)]*100)
-legend('observed', 'fitted')
-
-vChangesYields_PEPP_m   = fYieldsImpact_uSequence_wSpread(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,2),...
-    BX.(cty),  param_i.(cty).K1P_level, param_i.(cty).Gamma_1);
-ChangesYields_PEPP_m.(cty) = vChangesYields_PEPP_m;
-
-figure
-plot([5:10],[vChangesYields_PEPP.(cty)(5:10)' ChangesYields_PEPP_m.(cty)]*100)
-legend('observed', 'fitted')
-
-
+% 
+%  cty='IT';
+%  BX.(cty) = fATSMDiscrete_YieldLoadingsRecurrence_BX_Gamma(1:EstimationData_i.(cty).mats_YCfit(end), param_i.(cty).K1P_level, param_i.(cty).Lambda_1, param_i.(cty).Omega_square ,param_i.(cty).rho1*EstimationData_i.(cty).dt,EstimationData_i.(cty).dt, param_i.(cty).Gamma_1)';
+% % 
+%  vChangesYields_APP_m  = fYieldsImpact_uSequence_wSpread(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,1),...
+%      BX.(cty),  param_i.(cty).K1P_level, param_i.(cty).Gamma_1);
+% 
+%  ChangesYields_APP_m.(cty) = vChangesYields_APP_m;
+% 
+%  figure
+%  plot([5:10],[vChangesYields_APP.(cty)(5:10)' ChangesYields_APP_m.(cty)]*100)
+%  legend('observed', 'fitted')
+% 
+%  vChangesYields_PEPP_m   = fYieldsImpact_uSequence_wSpread(EstimationData_i.(cty).mats_YCfit , uSequence.(cty)(:,:,2),...
+%      BX.(cty),  param_i.(cty).K1P_level, param_i.(cty).Gamma_1);
+%  ChangesYields_PEPP_m.(cty) = vChangesYields_PEPP_m;
+% 
+%  figure
+%  plot([5:10],[vChangesYields_PEPP.(cty)(5:10)' ChangesYields_PEPP_m.(cty)]*100)
+%  legend('observed', 'fitted')
+ 
 
 %% Fit of the changes in DE yields upon PEPP announcement
 %for ii=1:length(countries); cty=countries{ii};
@@ -598,39 +620,190 @@ legend('observed', 'fitted')
 
 
 
-%  %% Computing discount factors
+%% Computing discount factors
 %
+for iii=1:2
+    
+    cty=countries{iii};
 %     % Specify maturities
-%     vMaturities         = 1:1:10/EstimationData.dt;
+     vMaturities         = 1:1:10/EstimationData_i.(cty).dt;
 %
 %     % Estimated loadings
 %     [BX, AX]            = gaussianDiscreteYieldLoadingsRecurrence(vMaturities, param.K0Q, param.K1Q, param.Omega_square, ...
 %                                 param.rho0 * EstimationData.dt, param.rho1*EstimationData.dt, EstimationData.dt);
-%     param.mDiscountFactors      = zeros(length(vMaturities),length(EstimationData.mats_TSfit));
-%
-%     for j = 1:length(EstimationData.mats_TSfit)
-%
-%         dMat_analysis                   = EstimationData.mats_TSfit(j);
-%
-%         % Express the yield maturity in the frequency of the model
-%         mat                             = dMat_analysis/EstimationData.dt;
-%
-%         H = mat-1;
-%
-%         % Estimated weighting function
-%         vDiscounting_estimated    = NaN(H,1);
-%         for ii = 1:H
-%             vDiscounting_estimated(ii) = ((mat-(ii-1))/mat * BX(3, mat-(ii-1)) - (mat-ii)/mat * BX(3, mat-ii)*param.K1P_level(3,3));
-%         end
-%
-%         param.mDiscountFactors(1:H,j) = vDiscounting_estimated;
-%
+
+    
+    if strcmp(cty, 'IT') %with default
+        [BX.(cty), AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence_wDefault(vMaturities, param_i.(cty).K0Q, param_i.(cty).K1Q_level, param_i.(cty).Omega_square, ...
+            param_i.(cty).rho0 * EstimationData_i.(cty).dt, param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt, param_i.(cty).Gamma_0, param_i.(cty).Gamma_1);
+    else
+        [BX.(cty), AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence(vMaturities, param_i.(cty).K0Q, param_i.(cty).K1Q, param_i.(cty).Omega_square, ...
+            param_i.(cty).rho0 * EstimationData_i.(cty).dt, param_i.(cty).rho1*EstimationData_i.(cty).dt, EstimationData_i.(cty).dt);
+        
+    end
+    
+%     if strcmp(cty, 'IT')
+%         BX.(cty) = fATSMDiscrete_YieldLoadingsRecurrence_BX_Gamma(vMaturities, param_i.(cty).K1P_level, param_i.(cty).Lambda_1, param_i.(cty).Omega_square ,param_i.(cty).rho1*EstimationData_i.(cty).dt,EstimationData_i.(cty).dt, param_i.(cty).Gamma_1);
+%         
+%     else
+%         BX.(cty) = fATSMDiscrete_YieldLoadingsRecurrence_BX_Lambda(vMaturities, param_i.(cty).K1P, param_i.(cty).Lambda_1, param_i.(cty).Omega_square ,param_i.(cty).rho1*EstimationData_i.(cty).dt,EstimationData_i.(cty).dt);
 %     end
-%
-%     %     save()
-%
-%     DEvariables.paramDE = param;
-%     DEvariables.yields_m_FullSampleDE = yields_m_FullSample;
-%     DEvariables.EstimatedYieldsFullSampleDE = EstimationData.YieldsFullSample;
-% %     name = ;
-%     save([sOutputDirectory 'LambdasDE_TK.mat'], 'DEvariables');
+     param_i.(cty).mDiscountFactors_FF      = zeros(length(vMaturities),length(EstimationData_i.(cty).mats_TSfit));
+     param_i.(cty).mDiscountFactors_CR      = zeros(length(vMaturities),length(EstimationData_i.(cty).mats_TSfit));
+
+    for j = 1:length(EstimationData_i.(cty).mats_TSfit)
+
+        dMat_analysis                   = EstimationData_i.(cty).mats_TSfit(j);
+
+        % Express the yield maturity in the frequency of the model
+        mat                             = dMat_analysis/EstimationData_i.(cty).dt;
+
+        H = mat-1;
+
+        % Estimated weighting function
+        vDiscounting_estimated_FF    = NaN(H,1);
+        vDiscounting_estimated_CR    = NaN(H,1);
+        
+        if strcmp(cty, 'IT')
+            vDiscounting_estimated_FF(1) = ((mat)/mat * (BX.(cty)(3, mat) ) - ( (mat-1)/mat * (BX.(cty)(3, mat-1)) - 1/mat * param_i.(cty).Gamma_1(3) ) *param_i.(cty).K1P_level(3,3));
+            
+            vDiscounting_estimated_CR(1) = ((mat)/mat * (BX.(cty)(6, mat) ) - ( (mat-1)/mat * (BX.(cty)(6, mat-1)) - 1/mat * param_i.(cty).Gamma_1(6) )* param_i.(cty).K1P_level(6,6));
+            
+        else
+            vDiscounting_estimated_FF(1) = ((mat)/mat * (BX.(cty)(3, mat) ) - (mat-1)/mat * BX.(cty)(3, mat-1)*param_i.(cty).K1P_level(3,3));
+        end
+        
+        
+        for ii = 2:H
+             if strcmp(cty, 'IT')
+                vDiscounting_estimated_FF(ii) = (mat-(ii-1))/mat * (BX.(cty)(3, mat-(ii-1))) - 1/mat * param_i.(cty).Gamma_1(3)...
+                                             - (    (mat-ii)/mat * (BX.(cty)(3, mat-ii))     - 1/mat * param_i.(cty).Gamma_1(3)  )*param_i.(cty).K1P_level(3,3);
+                    
+%                 vDiscounting_estimated_CR(ii) = ((mat-(ii-1))/mat * (BX.(cty)(6, mat-(ii-1)) - param_i.(cty).Gamma_1(6)) - (mat-ii)/mat * (BX.(cty)(6, mat-ii) - param_i.(cty).Gamma_1(6))*param_i.(cty).K1P_level(6,6));
+                vDiscounting_estimated_CR(ii) = (mat-(ii-1))/mat * (BX.(cty)(6, mat-(ii-1))) - 1/mat * param_i.(cty).Gamma_1(6)...
+                                             - (    (mat-ii)/mat * (BX.(cty)(6, mat-ii))     - 1/mat * param_i.(cty).Gamma_1(6)  )*param_i.(cty).K1P_level(6,6);
+                
+             else
+                vDiscounting_estimated_FF(ii) = ((mat-(ii-1))/mat * (BX.(cty)(3, mat-(ii-1)) ) - (mat-ii)/mat * BX.(cty)(3, mat-ii)*param_i.(cty).K1P_level(3,3));
+             end
+        end
+        if strcmp(cty, 'IT')
+            vDiscounting_estimated_FF(mat,1) =  - 1/mat * param_i.(cty).Gamma_1(3) ;
+                            
+            vDiscounting_estimated_CR(mat,1) =  - 1/mat * param_i.(cty).Gamma_1(6) ;
+                
+        end
+        
+
+       
+        if strcmp(cty, 'IT')
+            param_i.(cty).mDiscountFactors_FF(1:mat,j) = vDiscounting_estimated_FF;
+            param_i.(cty).mDiscountFactors_CR(1:mat,j) = vDiscounting_estimated_CR;
+        else
+            param_i.(cty).mDiscountFactors_FF(1:H,j) = vDiscounting_estimated_FF;
+        end
+             
+    end
+    
+    
+    if strcmp(cty, 'IT')
+        param_i.(cty).Fitimpact_APP_duration = uSequence.(cty)(:,3,1)'*param_i.(cty).mDiscountFactors_FF*100;
+        param_i.(cty).Fitimpact_APP_creditrisk = uSequence.(cty)(:,6,1)'*param_i.(cty).mDiscountFactors_CR*100;
+%         param_i.(cty).Fitimpact_APP_creditrisk = uSequenceSpread.(cty)(:,6,1)'*param_i.(cty).mDiscountFactors_CR*100;
+        param_i.(cty).Fitimpact_APP = param_i.(cty).Fitimpact_APP_duration + param_i.(cty).Fitimpact_APP_creditrisk;
+        if size(uSequence.DE,3)>1
+        param_i.(cty).Fitimpact_PEPP_duration = uSequence.(cty)(:,3,2)'*param_i.(cty).mDiscountFactors_FF*100;
+                %         param_i.(cty).Fitimpact_PEPP_creditrisk = uSequenceSpread.(cty)(:,6,2)'*param_i.(cty).mDiscountFactors_CR*100;
+        param_i.(cty).Fitimpact_PEPP_creditrisk = uSequence.(cty)(:,6,2)'*param_i.(cty).mDiscountFactors_CR*100;
+        param_i.(cty).Fitimpact_PEPP =  param_i.(cty).Fitimpact_PEPP_duration + param_i.(cty).Fitimpact_PEPP_creditrisk;
+        end
+    else
+        param_i.(cty).Fitimpact_APP = uSequence.(cty)(:,3,1)'*param_i.(cty).mDiscountFactors_FF*100;
+      
+        if size(uSequence.DE, 3)>1
+         param_i.(cty).Fitimpact_PEPP = uSequence.(cty)(:,3,2)'*param_i.(cty).mDiscountFactors_FF*100;
+        end 
+    end
+    
+end
+
+% Check with the optimisation function 
+vErrors_ChangesYields_APP_DE = vChangesYields_APP.DE(5:10) - param_i.DE.Fitimpact_APP(5:10)/100;
+vRMSE_APP_DE = sum(power(vErrors_ChangesYields_APP_DE,2));
+vErrors_ChangesYields_APP_IT = vChangesYields_APP.IT(5:10) - param_i.IT.Fitimpact_APP(5:10)/100;
+vRMSE_APP_IT = sum(power(vErrors_ChangesYields_APP_IT,2));
+
+
+if size(uSequence.IT,3)>1
+vErrors_ChangesYields_PEPP_DE = vChangesYields_PEPP.DE(5:10) - param_i.DE.Fitimpact_PEPP(5:10)/100;
+vRMSE_PEPP_DE = sum(power(vErrors_ChangesYields_PEPP_DE,2));
+vErrors_ChangesYields_PEPP_IT = vChangesYields_PEPP.IT(5:10) - param_i.IT.Fitimpact_PEPP(5:10)/100;
+vRMSE_PEPP_IT = sum(power(vErrors_ChangesYields_PEPP_IT,2));
+
+MSE_changesyields_DiscountFact.DE = 1/2*(vRMSE_APP_DE + vRMSE_PEPP_DE)
+MSE_changesyields_DiscountFact.IT = 1/2*(vRMSE_APP_IT + vRMSE_PEPP_IT)
+end
+% Output of the optim are
+    MSE_changesyields.DE
+    MSE_changesyields.IT
+
+    
+figure
+plot([5:10],[vChangesYields_APP.IT(5:10)'*100 param_i.IT.Fitimpact_APP(5:10)'])
+title('IT - APP');
+legend('observed', 'fitted')
+
+figure
+plot([5:10],[vChangesYields_APP.DE(5:10)'*100 param_i.DE.Fitimpact_APP(5:10)'])
+title('DE - APP');
+legend('observed', 'fitted')
+
+figure
+plot([5:10],[vChangesYields_PEPP.DE(5:10)'*100 param_i.DE.Fitimpact_PEPP(5:10)'])
+title('DE - PEPP');
+legend('observed', 'fitted')
+
+figure
+plot([5:10],[vChangesYields_PEPP.IT(5:10)'*100 param_i.IT.Fitimpact_PEPP(5:10)'])
+title('IT - PEPP');
+legend('observed', 'fitted')
+
+  
+    
+save([sOutputDirectory 'EstimatesSpread_' sStartSample_TS_Estimation '_' sEndSample_TS_Estimation], ...
+                 'param_i', 'MSE_yields');
+
+
+%% save for table
+if table
+load summary.mat
+
+MSE_yields_IT=MSE_yields.IT;
+MSE_yields_DE=MSE_yields.DE;
+MSE_changesyields_IT =MSE_changesyields.IT;
+MSE_changesyields_DE =MSE_changesyields.DE;
+
+MSE_changesyields_DiscountFact_DE = MSE_changesyields_DiscountFact.DE;
+MSE_changesyields_DiscountFact_IT = MSE_changesyields_DiscountFact.IT;
+
+Num_Factors_IT = size(mX.IT,2)
+restr_lambda1_IT=sum(sum(param_i.IT.Lambda_1~=0));
+
+nEvents=size(uSequence.IT,3);
+YC = {'OIS'} % copy this up front so the user fils this before running
+Fiscalfact = {'Unw_IT_freefloat'} % copy this up front so the user fils this before running
+
+avgAPPerror_IT= mean([vChangesYields_APP.IT(5:10)'*100 param_i.IT.Fitimpact_APP(5:10)'])
+avgAPPerror_DE= mean([vChangesYields_APP.DE(5:10)'*100 param_i.DE.Fitimpact_APP(5:10)'])
+
+
+avgPEPPerror_IT= mean([vChangesYields_PEPP.IT(5:10)'*100 param_i.IT.Fitimpact_PEPP(5:10)'])
+avgPEPPerror_DE= mean([vChangesYields_PEPP.DE(5:10)'*100 param_i.DE.Fitimpact_PEPP(5:10)'])
+
+
+summary_table_newEntry = table(Num_Factors_IT, restr_lambda1_IT, nEvents, YC, Fiscalfact, MSE,MSE_yields_DE,MSE_yields_IT, MSE_changesyields_DE, MSE_changesyields_IT, MSE_changesyields_DiscountFact_DE, MSE_changesyields_DiscountFact_IT)
+summary_table = [summary_table; summary_table_newEntry]
+
+save summary summary_table
+
+end

@@ -1,5 +1,3 @@
-%% this is the trial for ITaly explained with OIS level and slope, eser quantity factor and spread IT-OIS level and slope
-
 
     % Clearing memory and graphical interface
     clc;
@@ -31,9 +29,8 @@
 %%  Load the full dataset for estimation of the model
 
     sEndSampleData = 'Dec-2021';
-    sCountry = 'IT';
 
-    load([sInputDirectory 'TS_ECB_' sCountry '_' sEndSampleData '.mat']);
+    load([sInputDirectory 'TS_ECB_DE_' sEndSampleData '.mat']);
 
 %% Load also the OIS data
     load([sInputDirectory 'OIS.mat']);
@@ -57,15 +54,15 @@
   
     
     % Select the yields and compute changes in yields
-     ZeroYields_MTS.IT       = yields.d.nom(:,vMaturities_analysis);
+    ZeroYields_MTS.DE       = yields.d.nom(:,vMaturities_analysis);
      
-    ZeroYields_MTS.Change_IT       = diff(ZeroYields_MTS.IT(indexDateInitial_Regressions:indexDateFinal_Regressions,:)); 
-   
+    ZeroYields_MTS.Change_DE       = diff(ZeroYields_MTS.DE(indexDateInitial_Regressions:indexDateFinal_Regressions,:)); 
+    
   % Specify the window for the regression analysis
     sDateStart_RegAnalysis  = '31/12/2013';
     sDateEnd_RegAnalysis    = '31/03/2015';
    
-    Y               = ZeroYields_MTS.Change_IT(2:end,:);
+    Y               = ZeroYields_MTS.Change_DE(2:end,:);
     X_Dummy         = zeros(length(vDates_Selection),length(vDatesEventDates));
     
     for iEventDate = 1:length(vDatesEventDates)
@@ -138,32 +135,6 @@
     cP_OIS_fullsample = OIS_rates_fullsample*W';   % T*N % principal components ("cP" stands for "caligraphic P", as in the JSZ paper)
 
     
-%% IT yield curve
-    index_mats_IT= 12:12:120;
-    indexStartSample_estimation_IT     = find(strcmp(cellstr(datestr(Data.nom.m.dates, 'mmmyyyy')), sStartSample_TS_Estimation), 1, 'first');
-    indexEndSample_estimation_IT       = find(strcmp(cellstr(datestr(Data.nom.m.dates, 'mmmyyyy')), sEndSample_TS_Estimation), 1, 'last');
-    indexEndSample_fullsample_IT       = find(strcmp(cellstr(datestr(Data.nom.m.dates, 'mmm-yyyy')), sEndSampleData), 1, 'last');
-   
-    IT_yields_estimation   = yields.m.nom(indexStartSample_estimation_IT:indexEndSample_estimation_IT,index_mats_IT); % OIS rates from 1y to 10y (leave for the moment longer or shorter maturities out)
-    IT_yields_fullsample   = yields.m.nom(indexStartSample_estimation_IT:indexEndSample_fullsample_IT,index_mats_IT); % OIS rates from 1y to 10y (leave for the moment longer or shorter maturities out)
-
-    %cP_IT_o = [IT_yields_estimation(:,1) IT_yields_estimation(:,end)-IT_yields_estimation(:,1)];
-    %cP_IT_fullsample = [IT_yields_fullsample(:,1) IT_yields_fullsample(:,end)-IT_yields_fullsample(:,1)];
-    
-    W = pca(IT_yields_fullsample);  % Compute loading matrix for principal components 
-
-    % explained_cum = cumsum(explained);
-    W = W(:,1:N_OIS)';            % N*J ("J" is the number of maturities)
-    % OPPOSITE OF PC2
-    W(2,:)       = -W(2,:);
-         
-    cP_IT_o = IT_yields_estimation*W';   % T*N % principal components ("cP" stands for "caligraphic P", as in the JSZ paper)
-    cP_IT_fullsample = IT_yields_fullsample*W';   % T*N % principal components ("cP" stands for "caligraphic P", as in the JSZ paper)
-       
-    
-    cP_IT_OIS_o = cP_IT_o - cP_OIS_o;
-    cP_IT_OIS_fullsample = cP_IT_fullsample - cP_OIS_fullsample;
-
 %%  Setup format of model/data
     
     indexStartSample_estimation_yields     = find(strcmp(cellstr(datestr(Data.nom.m.dates, 'mmmyyyy')), sStartSample_TS_Estimation), 1, 'first');
@@ -193,19 +164,16 @@
     
     vQuantity_Estimation    = Data_Quantity(indexStartSample_estimation_FreeFloat:indexEndSample_estimation_FreeFloat,13); % T-10-year equivalent big-4, from the begining in decimals
     vQuantity_FullSample    = Data_Quantity(indexStartSample_estimation_FreeFloat:indexEndSample_FreeFloat,13); % T-10-year equivalent big-4, from the begining in decimals
-
-%% Putting together all factors
     
-%     mX = [cP_OIS_o vQuantity_Estimation];
-    mX = [cP_OIS_o vQuantity_Estimation cP_IT_OIS_o]; 
-
+    mX = [cP_OIS_o];
     N_estimation = size(mX,2);
+    
+    
     
 %%  Full sample of pricing factors
 
 %     PC_FullSample   = OIS_rates_fullsample * W';
-%  mX_FullSample   = [cP_OIS_fullsample vQuantity_FullSample ];
-    mX_FullSample   = [cP_OIS_fullsample vQuantity_FullSample cP_IT_OIS_fullsample];
+    mX_FullSample   = [cP_OIS_fullsample];
     
 %% OLS regression for the short rate on the level and slope factors
 
@@ -218,10 +186,9 @@
     
     param.rho0          = B(1);
     % Version 1: with only OIS PCs
-%     param.rho1          = [B(2:end); 0]; % restriction that the quantity variable doesn't enter the short rate equation
+    param.rho1          = [B(2:end)]; % restriction that the quantity variable doesn't enter the short rate equation
     % Version 2: also with the free-float
 %     param.rho1          = B(2:end); % drop restriction that the quantity variable doesn't enter the short rate equation
-    param.rho1          = [B(2:end); 0 ; 0 ; 0];
 
     vShortRate_m        = param.rho0 + mX * param.rho1;
     % Checks/Plots
@@ -234,71 +201,53 @@
 
 %% VAR for the P-measure (possibly with restrictions)
 
-%     [B_level,~,Residual_level,VARPARAM_Level]             = mvregress([ones(T-1,1)  cP_OIS_o(1:end-1,:)], cP_OIS_o(2:end,1));
-%     [B_slope,~,Residual_slope,VARPARAM_Slope]             = mvregress([ones(T-1,1)  cP_OIS_o(1:end-1,:)], cP_OIS_o(2:end,2));
+    [B_level,~,Residual_level,VARPARAM_Level]             = mvregress([ones(T-1,1)  cP_OIS_o(1:end-1,:)], cP_OIS_o(2:end,1));
+    [B_slope,~,Residual_slope,VARPARAM_Slope]             = mvregress([ones(T-1,1)  cP_OIS_o(1:end-1,:)], cP_OIS_o(2:end,2));
     [BETA,~,RESID,VARPARAM] = mvregress([ones(T-1,1)  cP_OIS_o(1:end-1,:)], cP_OIS_o(2:end,:)); %VAR for level slope
-    [BETA_spread,~,RESID_spread,VARPARAM_spread] = mvregress([ones(T-1,1)  cP_IT_OIS_o(1:end-1,:)], cP_IT_OIS_o(2:end,:));
+    %[B_quantity,SIGMA,Residual_quantity,VARPARAM_Quantity]             = mvregress([ones(T-1,1) vQuantity_Estimation(1:end-1,:)],vQuantity_Estimation(2:end)); %VAR for Qfactor
 
-    [B_quantity,SIGMA,Residual_quantity,VARPARAM_Quantity]             = mvregress([ones(T-1,1) vQuantity_Estimation(1:end-1,:)],vQuantity_Estimation(2:end)); %VAR for Qfactor
+    param.K0P       = [B_level(1); B_slope(1)];
 
-%     param.K0P       = [B_level(1); B_slope(1); B_quantity(1)];
-    param.K0P       = [BETA(1,:)'; B_quantity(1); BETA_spread(1,:)'];
-
-    if B_quantity(2:end)< 1
-%         param.K1P_level       = [B_level(2:end)' 0; B_slope(2:end)' 0; 0 0 B_quantity(2:end)'];
-        param.K1P_level = [BETA(2:end,:) zeros(2,3); zeros(1,2) B_quantity(2:end)' zeros(1,2); zeros(2,3) BETA_spread(2:end,:)];    
-    
-    else % if non-stationary
+    %if B_quantity(2:end)< 1
+        param.K1P_level       = [B_level(2:end)' ; B_slope(2:end)' ];
+    %else % if non-stationary
         % Fix the autoregression parameter
-%         param.K1P_level       = [B_level(2:end)' 0; B_slope(2:end)' 0; 0 0 0.99];
-%         % Fix consequently also the intercept
-%         param.K0P(3)          =  mean(vQuantity_Estimation) * 0.01;% mean(EstimationData.vQuantity(2:end) - 0.99 * EstimationData.vQuantity(1:end-1,:));
-%         Residual_quantity     =  vQuantity_Estimation(2:end) - (ones(T-1,1) * param.K0P(3) + vQuantity_Estimation(1:end-1,:) * 0.99); 
-        
-        param.K1P_level       = [BETA(2:end,:) zeros(2,3); zeros(1,2) 0.99 zeros(1,2); zeros(2,3) BETA_spread(2:end,:)];    
+    %    param.K1P_level       = [B_level(2:end)' 0; B_slope(2:end)' 0; 0 0 0.99];
         % Fix consequently also the intercept
-        param.K0P(3)          =  mean(vQuantity_Estimation) * 0.01;% mean(EstimationData.vQuantity(2:end) - 0.99 * EstimationData.vQuantity(1:end-1,:));
-        Residual_quantity     =  vQuantity_Estimation(2:end) - (ones(T-1,1) * param.K0P(3) + vQuantity_Estimation(1:end-1,:) * 0.99); 
-        
-    
-    end
+    %    param.K0P(3)          =  mean(vQuantity_Estimation) * 0.01;% mean(EstimationData.vQuantity(2:end) - 0.99 * EstimationData.vQuantity(1:end-1,:));
+    %    Residual_quantity     =  vQuantity_Estimation(2:end) - (ones(T-1,1) * param.K0P(3) + vQuantity_Estimation(1:end-1,:) * 0.99); 
+    %end
 
+    
     param.K1P               = param.K1P_level - eye(N_estimation);
 
-%     param.Residual_level    = Residual_level;
-%     param.Residual_slope    = Residual_slope;
-%     param.Residual_quantity = Residual_quantity;
+    param.Residual_level    = Residual_level;
+    param.Residual_slope    = Residual_slope;
+    %param.Residual_quantity = Residual_quantity;
     
-%     mResiduals              = [Residual_level Residual_slope Residual_quantity];
-    mResiduals              = [RESID Residual_quantity RESID_spread];
+    mResiduals              = [Residual_level Residual_slope];
     param.Omega_square      = 1/(T-1) * mResiduals.' * mResiduals;
     param.Omega_chol        = chol(param.Omega_square, 'lower');  % the Cholesky decomposition of the variance covariance matrix
-
+   
 %%  Initial estimates for the market price of risk parameters
 
     load([sOutputDirectory 'StartingValues_ATSM_OIS.mat']);
     
 %% Extract the u-sequence
     
-    % Free float
+    % First, for Mar 2015
     [Data_Quantity, Header_FreeFloat] = xlsread('Data\Free_Float.xlsx', 'Deviations_Big4FF');
 %     vDates_FreeFloatDeviations = datestr()  
-    uSequence_FreeFloat_APP   = Data_Quantity(:,1); 
+    uSequence_FreeFloat_APP   = Data_Quantity(:,1); %WHAT IS THIS?
     uSequence_FreeFloat_PEPP   = Data_Quantity(61:end,2);
     
-    uSequence_FreeFloat_APP = [zeros(length(uSequence_FreeFloat_APP),2), uSequence_FreeFloat_APP, zeros(length(uSequence_FreeFloat_APP),2)];
-    uSequence_FreeFloat_PEPP = [zeros(length(uSequence_FreeFloat_PEPP),2), uSequence_FreeFloat_PEPP,zeros(length(uSequence_FreeFloat_PEPP),2)];
+    uSequence_FreeFloat_APP = [zeros(length(uSequence_FreeFloat_APP),2), uSequence_FreeFloat_APP];
+    uSequence_FreeFloat_PEPP = [zeros(length(uSequence_FreeFloat_PEPP),2), uSequence_FreeFloat_PEPP];
    
-    % Fiscal
-    [Data_DebtSeq, Header_DebtSeq] = xlsread('Data\Free_Float.xlsx', 'Deviations_Big4Fiscal');
-    uSequence_Debt_APP   = Data_DebtSeq(:,1);
-    uSequence_Debt_PEPP   = Data_DebtSeq(61:end,2);
-    
-
      
 %%  Dual optimization problem
     
-   % Select yields only as of 5 years onwards, for Germany
+    % Select yields only as of 5 years onwards, for Germany
     vChangesYields_APP = vChangesYields_APP(EstimationData.mats_YCfit);
     vChangesYields_PEPP = vChangesYields_PEPP(EstimationData.mats_YCfit);
     
@@ -308,17 +257,14 @@
     
     % Specify the objective function - both the APP and PEPP event
     m_uSequence_FreeFloat(:,:,1) = uSequence_FreeFloat_APP(1:120,:);
-    %m_uSequence_FreeFloat(:,:,2) = uSequence_FreeFloat_PEPP(1:120,:);
-    m_uSequence_FreeFloat(:,:,1) = uSequence_FreeFloat_PEPP(1:120,:);
-    %mChangesYields               = [vChangesYields_APP' vChangesYields_PEPP']; 
-    mChangesYields               = [vChangesYields_PEPP']; 
+    m_uSequence_FreeFloat(:,:,2) = uSequence_FreeFloat_PEPP(1:120,:);
+    mChangesYields               = [vChangesYields_APP' vChangesYields_PEPP']; 
     
-    obj_fun         = @(vLambda) fRMSE_pricing_twocriterions_moreSequences_ITSpread(w, mX, mChangesYields, m_uSequence_FreeFloat, EstimationData, param, vLambda);
+    obj_fun         = @(vLambda) fRMSE_pricing_twocriterions_moreSequences_TK_LS_DE(w, mX, mChangesYields, m_uSequence_FreeFloat, EstimationData, param, vLambda);
     
-%     vLambda0        = [param_OIS_0.Lambda_0; vec([param_OIS_0.Lambda_1 [0.11; -0.02]])];
-    vLambda0        = [0.11*ones(N_estimation+1,1) ; param_OIS_0.Lambda_0; param_OIS_0.Lambda_0; vec(param_OIS_0.Lambda_1); 0.11*ones(6,1); vec(param_OIS_0.Lambda_1); 0.11*ones(6,1)];
-
-    [MSE_fun_0, Fy, Fdy]  = fRMSE_pricing_twocriterions_moreSequences_ITSpread(w, mX, mChangesYields, m_uSequence_FreeFloat, EstimationData, param, vLambda0);   
+    vLambda0        = [param_OIS_0.Lambda_0; vec([param_OIS_0.Lambda_1])];
+  
+    [MSE_fun_0, Fy, Fdy]  = fRMSE_pricing_twocriterions_moreSequences_TK_LS_DE(w, mX, mChangesYields, m_uSequence_FreeFloat, EstimationData, param, vLambda0);   
     
     % Seting up optimization function
     options         = optimset('display', 'off', 'TolX', 10^-25, 'TolFun',10^-25);
@@ -331,24 +277,16 @@
 
     
     %% Compute final results
-    
-    param.Gamma_0          = vLambda_dualobj(1);
-    param.Gamma_1          = vLambda_dualobj(2:N_estimation+1);
-    N_eser                  = 3; %risk factors priced in eser et al
-    
-    
-    param.Lambda_0         = [vLambda_dualobj(N_estimation+2: N_estimation+3); 0 ; vLambda_dualobj(N_estimation+4: N_estimation+5)]; 
-    param.Lambda_1         = [reshape(vLambda_dualobj(N_estimation+6:N_estimation+15), 2, 5) ; zeros(1, N_estimation); reshape(vLambda_dualobj(N_estimation+16:end), 2, 5)]; 
-    
+
+    param.Lambda_0         = [vLambda_dualobj(1:N_OIS)];
+    param.Lambda_1         = [reshape(vLambda_dualobj(N_estimation+1:end), N_OIS, N_estimation)];
     
     param.K0Q              = param.K0P - param.Omega_chol * param.Lambda_0; 
     param.K1Q              = param.K1P - param.Omega_chol * param.Lambda_1; 
     param.K1Q_level        = param.K1Q + eye(N_estimation);   % KN added
     
-                                        
-    [BX_estimated, AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence_wDefault(EstimationData.mats_TSfit / EstimationData.dt, param.K0Q, param.K1Q_level, param.Omega_square, ...
-                                            param.rho0 * EstimationData.dt, param.rho1*EstimationData.dt, EstimationData.dt, param.Gamma_0, param.Gamma_1 );
-
+    [BX_estimated, AX_estimated, B_price, A_price]  = gaussianDiscreteYieldLoadingsRecurrence(EstimationData.mats_TSfit / EstimationData.dt, param.K0Q, param.K1Q, param.Omega_square, ...
+                                            param.rho0 * EstimationData.dt, param.rho1*EstimationData.dt, EstimationData.dt);
 
     % Computing the fit of the yields over the TS window 
     yields_m                = ones(T,1)*AX_estimated + mX * BX_estimated; % (T+1)*J, model-implied yields
@@ -359,82 +297,69 @@
         pause(5)
     end
     
-%     % Plot Contribution of the 3rd factor
-%     mContribution_Q          = mX_FullSample(:,3) * BX_estimated(3,:);
-%     mContribution_LS         = mX_FullSample(:,1:2) * BX_estimated(1:2,:);
-%     
-%     plot([yields_m_FullSample(:,end) mContribution_Q(:,end)]*100)
-%     
+    % Plot Contribution of the 3rd factor
+    mContribution_Q          = mX_FullSample(:,3) * BX_estimated(3,:);
+    mContribution_LS         = mX_FullSample(:,1:2) * BX_estimated(1:2,:);
+    
+    plot([yields_m_FullSample(:,end) mContribution_Q(:,end)]*100)
+    
     vRMSE_TS            = sqrt(mean(power(EstimationData.Yields - yields_m,2)))*10000
 %     vRMSE_TS            = sqrt(mean(power(EstimationData.Yields - mContribution_LS(1:66,:),2)))*10000
     vRMSE_FullSample    = sqrt(mean(power(EstimationData.YieldsFullSample - yields_m_FullSample,2)))*10000
     
-%%  Fit of the changes in IT yields over the APP period
+%%  Fit of the changes in DE yields over the APP period
 
-     vChangesYields_APP_m   = fYieldsImpact_uSequence_wSpread(EstimationData.mats_YCfit / EstimationData.dt, uSequence_FreeFloat_APP,...
-        fATSMDiscrete_YieldLoadingsRecurrence_BX_Gamma(1:EstimationData.mats_YCfit(end)/EstimationData.dt, param.K1P_level, param.Lambda_1, param.Omega_square, param.rho1*EstimationData.dt, EstimationData.dt, param.Gamma_1)', param.K1P_level, param.Gamma_1);
+    vChangesYields_APP_m   = fYieldsImpact_uSequence(EstimationData.mats_YCfit / EstimationData.dt, uSequence_FreeFloat_APP,...
+        fATSMDiscrete_YieldLoadingsRecurrence_BX(1:EstimationData.mats_YCfit(end)/EstimationData.dt, param.K1Q,param.rho1*EstimationData.dt, EstimationData.dt)', param.K1P_level);
    
-    
     figure
     plot([vChangesYields_APP' vChangesYields_APP_m]*100)
     legend('observed', 'fitted')
-   
     
-%% Fit of the changes in IT yields upon PEPP announcement    
+%% Fit of the changes in DE yields upon PEPP announcement    
 
-    
-     vChangesYields_PEPP_m   = fYieldsImpact_uSequence_wSpread(EstimationData.mats_YCfit / EstimationData.dt, uSequence_FreeFloat_PEPP,...
-        fATSMDiscrete_YieldLoadingsRecurrence_BX_Gamma(1:EstimationData.mats_YCfit(end)/EstimationData.dt, param.K1P_level, param.Lambda_1, param.Omega_square, param.rho1*EstimationData.dt, EstimationData.dt, param.Gamma_1)', param.K1P_level, param.Gamma_1);
+    vChangesYields_PEPP_m   = fYieldsImpact_uSequence(EstimationData.mats_YCfit / EstimationData.dt, uSequence_FreeFloat_PEPP,...
+        fATSMDiscrete_YieldLoadingsRecurrence_BX(1:EstimationData.mats_YCfit(end)/EstimationData.dt, param.K1Q,param.rho1*EstimationData.dt, EstimationData.dt)', param.K1P_level);
    
     figure
     plot([vChangesYields_PEPP' vChangesYields_PEPP_m]*100)
     legend('observed', 'fitted')
     
+ %% Computing discount factors
+
+    % Specify maturities
+    vMaturities         = 1:1:10/EstimationData.dt;
+      
+    % Estimated loadings 
+    [BX, AX]            = gaussianDiscreteYieldLoadingsRecurrence(vMaturities, param.K0Q, param.K1Q, param.Omega_square, ...
+                                param.rho0 * EstimationData.dt, param.rho1*EstimationData.dt, EstimationData.dt);
+    param.mDiscountFactors      = zeros(length(vMaturities),length(EstimationData.mats_TSfit));                
+
+    for j = 1:length(EstimationData.mats_TSfit)   
+        
+        dMat_analysis                   = EstimationData.mats_TSfit(j);                          
+
+        % Express the yield maturity in the frequency of the model
+        mat                             = dMat_analysis/EstimationData.dt;
+
+        H = mat-1;
+
+        % Estimated weighting function
+        vDiscounting_estimated    = NaN(H,1);
+        for ii = 1:H 
+            vDiscounting_estimated(ii) = ((mat-(ii-1))/mat * BX(3, mat-(ii-1)) - (mat-ii)/mat * BX(3, mat-ii)*param.K1P_level(3,3));
+        end  
+        
+        param.mDiscountFactors(1:H,j) = vDiscounting_estimated;
+        
+    end                                                                                 
+   
 %% Save the discount factors
 
 %     save()
-    ITvariables.paramIT = param;
-    ITvariables.yields_m_FullSampleIT = yields_m_FullSample;
-    ITvariables.EstimatedYieldsFullSampleIT = EstimationData.YieldsFullSample;
+    DEvariables.paramDE = param;
+    DEvariables.yields_m_FullSampleDE = yields_m_FullSample;
+    DEvariables.EstimatedYieldsFullSampleDE = EstimationData.YieldsFullSample;
 %     name = ;
-    save([sOutputDirectory 'LambdasIT.mat'], 'ITvariables');
+    save([sOutputDirectory 'LambdasDE.mat'], 'DEvariables');
     
-
-%  %% Computing discount factors
-% 
-%     % Specify maturities
-%     vMaturities         = 1:1:10/EstimationData.dt;
-%       
-%     % Estimated loadings 
-%     [BX, AX]            = gaussianDiscreteYieldLoadingsRecurrence(vMaturities, param.K0Q, param.K1Q, param.Omega_square, ...
-%                                 param.rho0 * EstimationData.dt, param.rho1*EstimationData.dt, EstimationData.dt);
-%     param.mDiscountFactors      = zeros(length(vMaturities),length(EstimationData.mats_TSfit));                
-% 
-%     for j = 1:length(EstimationData.mats_TSfit)   
-%         
-%         dMat_analysis                   = EstimationData.mats_TSfit(j);                          
-% 
-%         % Express the yield maturity in the frequency of the model
-%         mat                             = dMat_analysis/EstimationData.dt;
-% 
-%         H = mat-1;
-% 
-%         % Estimated weighting function
-%         vDiscounting_estimated    = NaN(H,1);
-%         for ii = 1:H 
-%             vDiscounting_estimated(ii) = ((mat-(ii-1))/mat * BX(3, mat-(ii-1)) - (mat-ii)/mat * BX(3, mat-ii)*param.K1P_level(3,3));
-%         end  
-%         
-%         param.mDiscountFactors(1:H,j) = vDiscounting_estimated;
-%         
-%     end                                                                                 
-%    
-% %% Save the discount factors
-% 
-% %     save()
-%     DEvariables.paramDE = param;
-%     DEvariables.yields_m_FullSampleDE = yields_m_FullSample;
-%     DEvariables.EstimatedYieldsFullSampleDE = EstimationData.YieldsFullSample;
-% %     name = ;
-%     save([sOutputDirectory 'LambdasDE.mat'], 'DEvariables');
-%     

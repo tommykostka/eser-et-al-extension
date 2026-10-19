@@ -11,15 +11,15 @@ function vY = fYieldsImpact_uSequence(vmat, uSeq, bnMat, Phi)
 % OUTPUT: change in yield of maturity n due to shock sequence vs no shock
 % sequence
 
-    nPeriods    = size(uSeq,1)-1;
-    J           = length(vmat);
+    nPeriods    = size(uSeq,1)-1; % 119
+    J           = length(vmat);   %10
     vY          = NaN(J,1);
     
     for j = 1:J
         
         mat = vmat(j);
         dY = bnMat(mat,:) * uSeq(1,:)';
-        TT = min(nPeriods, mat-1);
+        TT = min(nPeriods, mat-1); % it's always mat-1
         if nPeriods>0
             for ii = 1:TT
                 dY = dY + (mat-ii)/mat * bnMat(mat-ii,:) * (uSeq(ii+1,:)'- Phi * uSeq(ii,:)'); % note the u Matrix starts with obs t+0, i.e. uSeq(2)=u_{t+1} usw

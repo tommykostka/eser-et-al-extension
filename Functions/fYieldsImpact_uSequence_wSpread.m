@@ -12,19 +12,36 @@ function vY = fYieldsImpact_uSequence_wSpread(vmat, uSeq, bnMat, Phi, G1)
 % OUTPUT: change in yield of maturity n due to shock sequence vs no shock
 % sequence
 
-    nPeriods    = size(uSeq,1)-1;
-    J           = length(vmat);
+    nPeriods    = size(uSeq,1)-1; % 119
+    J           = length(vmat);   %10
     vY          = NaN(J,1);
     
     for j = 1:J
         
         mat = vmat(j);
-        dY = bnMat(mat,:) * uSeq(1,:)';
-        TT = min(nPeriods, mat-1);
-        if nPeriods>0
-            for ii = 1:TT
-                dY = dY + (mat-ii)/mat * (bnMat(mat-ii,:) - G1')* (uSeq(ii+1,:)'- Phi * uSeq(ii,:)'); % note the u Matrix starts with obs t+0, i.e. uSeq(2)=u_{t+1} usw
+%         dY = bnMat(mat,:) * uSeq(1,:)';
+          dY =  bnMat(mat,:) * uSeq(1,:)'- ((mat-1)/mat * bnMat(mat-1,:) - 1/mat * G1'*Phi )* uSeq(1,:)' ;
+          
+              
+        TT = min(nPeriods, mat-1); % it's always mat-1
+        if TT>0
+%             for ii =1:TT
+            for ii = 2:TT
+%                 dY = dY + ((mat-ii)/mat * (bnMat(mat-ii,:)) - 1/mat * G1')* (uSeq(ii+1,:)'- Phi * uSeq(ii,:)'); % note the u Matrix starts with obs t+0, i.e. uSeq(2)=u_{t+1} usw
+                dY = dY + ((mat-(ii-1))/mat * (bnMat(mat-(ii-1),:)) - 1/mat * G1')* (uSeq(ii,:)') - ...
+                          ((mat-ii)/mat * (bnMat(mat-ii,:)) - 1/mat * G1')*Phi * uSeq(ii,:)'; % note the u Matrix starts with obs t+0, i.e. uSeq(2)=u_{t+1} usw
+            
             end
         end
-        vY(j) = dY;
+%         vY(j) = dY ;%- 1/mat * G1'* uSeq(TT+1,:)' ;
+        vY(j) = dY  - 1/mat * G1'* uSeq(TT+1,:)' ;
     end
+    
+%            
+%            
+%            
+%            
+%            
+%            
+%        
+    

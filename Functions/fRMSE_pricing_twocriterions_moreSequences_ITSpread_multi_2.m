@@ -71,5 +71,5 @@ function [MSE, MSE_yields, MSE_changesyields, AX, BX] = fRMSE_pricing_twocriteri
     
     % Weighting of the two parts of the objective function
 %     MSE                = w * MSE_yields + w/2* MSE_changesyields + w/2* MSE_changesyields
-    MSE                = w * MSE_yields + w/2*dSum_YieldChanges_Events + w/2*dSum_SpreadChanges_Events
+    MSE                = w * MSE_yields + w/2*dSum_YieldChanges_Events + w/2*dSum_SpreadChanges_Events;
     
