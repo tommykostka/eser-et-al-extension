@@ -81,11 +81,14 @@ function C = spread_stage_configs(stage)
 end
 
 function x = load_x(name)
-    s = load(fullfile('Output_runs', [name '.mat'])); x = s.R.x;
+% Warm start from an earlier run; empty (default starting values) if that run is not available.
+    f = fullfile('Output_runs', [name '.mat']);
+    if exist(f, 'file'), s = load(f); x = s.R.x; else x = []; end
 end
 
 function x = jitter(x, seed)
 % Random restart: perturb every parameter by 50% of its size (at least 0.2), keep Gamma >= 0 where needed.
-    randn('seed', seed); rand('seed', seed);
+    if isempty(x), return; end
+    rng(seed);
     x = x + max(0.5 * abs(x), 0.2) .* randn(size(x));
 end

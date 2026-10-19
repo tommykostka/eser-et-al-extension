@@ -25,9 +25,10 @@ function R = spread_estimate(cfg, raw)
     x0 = min(max(x0, lb), ub);
     resid = @(z) residuals(z, x0, free, S, cfg);
 
-    % ---- Levenberg-Marquardt least squares on the free parameters ----
+    % ---- bounded least squares on the free parameters ----
+    % MATLAB: lsqnonlin (Optimization Toolbox). Octave: nonlin_residmin (optim package).
     z0 = x0(free);
-    if exist('OCTAVE_VERSION', 'builtin')
+    if exist('OCTAVE_VERSION', 'builtin') && ~strcmp(cfg.optimizer, 'lsqnonlin')
         opts = optimset('lbound', lb(free), 'ubound', ub(free), 'MaxIter', cfg.maxIter, 'TolFun', cfg.tol);
         [z, ~, cvg, outp] = nonlin_residmin(resid, z0, opts);
         info.exitflag = cvg; info.iterations = outp.niter;
@@ -35,7 +36,7 @@ function R = spread_estimate(cfg, raw)
         opts = optimoptions('lsqnonlin', 'Display', 'off', 'MaxIterations', cfg.maxIter, ...
                             'FunctionTolerance', cfg.tol, 'StepTolerance', cfg.tol, 'MaxFunctionEvaluations', 1e6);
         [z, ~, ~, info.exitflag, outp] = lsqnonlin(resid, z0, lb(free), ub(free), opts);
-        info.iterations = outp.iterations;
+        if isfield(outp, 'iterations'), info.iterations = outp.iterations; else info.iterations = outp.niter; end
     end
     x = x0; x(free) = z;
     M = spread_model(x, S, cfg);

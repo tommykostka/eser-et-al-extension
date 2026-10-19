@@ -24,9 +24,28 @@ function raw = spread_load_inputs()
 end
 
 function s = sheet(file, name)
-    [num, txt] = xlsread(file, name);
-    s.dates = datenum(txt(2:end,1), 'dd/mm/yyyy');
-    s.num   = num(1:numel(s.dates), :);
+% Reads a sheet whose first column holds dates and whose first row holds
+% headers. Works whether xlsread returns the dates as text (MATLAB on
+% Windows) or as Excel serial numbers (MATLAB on Mac/Linux, Octave).
+    [~, ~, raw] = xlsread(file, name);
+    body = raw(2:end, :);
+    n = size(body, 1);
+    d = NaN(n, 1);
+    for i = 1:n
+        c = body{i, 1};
+        if isnumeric(c) && isscalar(c) && ~isnan(c)
+            d(i) = c + 693960;                          % Excel serial date -> MATLAB datenum
+        elseif ischar(c) && ~isempty(c)
+            d(i) = datenum(c, 'dd/mm/yyyy');
+        end
+    end
+    keep = ~isnan(d);
+    vals = body(keep, 2:end);
+    num = NaN(size(vals));
+    isnum = cellfun(@(c) isnumeric(c) && isscalar(c), vals);
+    num(isnum) = cell2mat(vals(isnum));
+    s.dates = d(keep);
+    s.num   = num;                                      % column k = k-th column after the date column
     s.file  = file; s.sheet = name;
 end
 
