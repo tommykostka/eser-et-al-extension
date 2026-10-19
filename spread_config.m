@@ -14,6 +14,8 @@ function cfg = spread_config(varargin)
                                            %   'ffgdp'          (debt - Eurosystem holdings)/GDP, IT (FF_GDP_IT)
     cfg.events    = {'APP', 'PEPP'};       % event reactions to fit
     cfg.w         = 0.5;                   % weight on the yield-level fit (1-w on the event fit)
+    cfg.target    = 'levels';              % 'levels' (DE, IT), 'spread' (DE, IT-DE), 'spread_events' (spread only for APP/PEPP)
+    cfg.spreadWeight = 1;                  % weight of the IT (or IT-DE) part relative to DE
     cfg.gamma     = 'fiscal_only';         % default intensity: 'fiscal_only' (only Gamma_1 on the fiscal factor, >= 0) or 'all'
     cfg.fiscalGammaNonneg = true;          % Gamma_1 on the fiscal factor >= 0: default risk rises with fiscal risk
     cfg.maxIntensity = Inf;                % optional cap on IT default intensity, per year (e.g. 0.10 = 10%)

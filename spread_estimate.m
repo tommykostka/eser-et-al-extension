@@ -58,6 +58,15 @@ function R = spread_estimate(cfg, raw)
         end
         R.yieldRMSE.(cty) = sqrt(mean(M.eY.(cty)(:).^2)) * bp;
     end
+    % IT-DE spread: reactions and yield fit
+    for e = 1:numel(cfg.events)
+        ev = cfg.events{e};
+        o = R.chart.IT.([ev '_observed']) - R.chart.DE.([ev '_observed']);
+        f = R.chart.IT.([ev '_fitted'])   - R.chart.DE.([ev '_fitted']);
+        R.chart.SP.([ev '_observed']) = o; R.chart.SP.([ev '_fitted']) = f;
+        R.rmse.(['SP_' ev]) = sqrt(mean((o - f).^2));
+    end
+    R.yieldRMSE.SP = sqrt(mean((M.eY.IT(:) - M.eY.DE(:)).^2)) * bp;
     R.chartRMSE = sqrt(mean(rmse_all.^2));                % bp, all chart points
     R.spreadLoading_bp_per_pp = M.spreadLoading * 100;    % bp change in IT-DE spread per +1pp in the fiscal factor, 5-10y
     R.signOK = all(R.spreadLoading_bp_per_pp >= -0.1);           % spread must not fall when the fiscal factor rises
@@ -72,8 +81,8 @@ function R = spread_estimate(cfg, raw)
     if ~exist(cfg.outDir, 'dir'), mkdir(cfg.outDir); end
     save(fullfile(cfg.outDir, [cfg.name '.mat']), 'R');
     write_chart_csv(fullfile(cfg.outDir, [cfg.name '_chart.csv']), R, cfg);
-    fprintf('%-60s chartRMSE %6.2f bp | DE APP %5.1f PEPP %5.1f | IT APP %5.1f PEPP %5.1f | yields DE %5.1f IT %5.1f bp | spread/pp %5.1f..%5.1f bp | min default int. %8.2e | ok %d | it %d flag %d | %4.0f s\n', ...
-            cfg.name, R.chartRMSE, R.rmse.DE_APP, R.rmse.DE_PEPP, R.rmse.IT_APP, R.rmse.IT_PEPP, R.yieldRMSE.DE, R.yieldRMSE.IT, ...
+    fprintf('%-60s chartRMSE %6.2f bp | DE APP %5.1f PEPP %5.1f | IT APP %5.1f PEPP %5.1f | spread APP %5.1f PEPP %5.1f | yields DE %5.1f IT %5.1f spread %5.1f bp | spread/pp %5.1f..%5.1f bp | min default int. %8.2e | ok %d | it %d flag %d | %4.0f s\n', ...
+            cfg.name, R.chartRMSE, R.rmse.DE_APP, R.rmse.DE_PEPP, R.rmse.IT_APP, R.rmse.IT_PEPP, R.rmse.SP_APP, R.rmse.SP_PEPP, R.yieldRMSE.DE, R.yieldRMSE.IT, R.yieldRMSE.SP, ...
             min(R.spreadLoading_bp_per_pp), max(R.spreadLoading_bp_per_pp), R.minIntensity, R.signOK, info.iterations, info.exitflag, R.runtime);
 end
 
@@ -86,7 +95,7 @@ end
 function write_chart_csv(file, R, cfg)
     fid = fopen(file, 'w');
     fprintf(fid, 'country,event,maturity,observed_pp,fitted_pp\n');
-    for c = {'DE', 'IT'}
+    for c = {'DE', 'IT', 'SP'}
         for e = 1:numel(cfg.events)
             ev = cfg.events{e}; o = R.chart.(c{1}).([ev '_observed']); f = R.chart.(c{1}).([ev '_fitted']);
             for k = 1:6

@@ -44,13 +44,21 @@ function M = spread_model(x, S, cfg)
     M.AX.IT = AX; M.BX.IT = BX; M.L0.IT = L0; M.L1.IT = L1; M.G0 = G0; M.G1 = G1;
 
     % ---- residuals ----
-    r = [];
+    % cfg.target: 'levels' fits DE and IT; 'spread' fits DE and the IT-DE spread
+    % (yields and event reactions); 'spread_events' uses the spread only for the
+    % event reactions. The spread error is the IT error minus the DE error.
+    eE.DE = S.target.DE - fit.DE; eE.IT = S.target.IT - fit.IT;
+    target = 'levels'; ws = 1;
+    if isfield(cfg, 'target'), target = cfg.target; end
+    if isfield(cfg, 'spreadWeight'), ws = cfg.spreadWeight; end
+    eY2 = eY.IT; eE2 = eE.IT;
+    if any(strcmp(target, {'spread', 'spread_events'})), eE2 = eE.IT - eE.DE; end
+    if strcmp(target, 'spread'), eY2 = eY.IT - eY.DE; end
+    r = [sqrt(0.5*w/T) * eY.DE(:); sqrt(0.5*(1-w)/nEv) * eE.DE(:); ...
+         sqrt(ws*0.5*w/T) * eY2(:); sqrt(ws*0.5*(1-w)/nEv) * eE2(:)];
     for c = {'DE', 'IT'}
-        cty = c{1};
-        eE = S.target.(cty) - fit.(cty);
-        r = [r; sqrt(0.5*w/T) * eY.(cty)(:); sqrt(0.5*(1-w)/nEv) * eE(:)];  %#ok<AGROW>
-        M.MSE_yields.(cty) = sum(eY.(cty)(:).^2) / T;
-        M.MSE_events.(cty) = sum(eE(:).^2) / nEv;
+        M.MSE_yields.(c{1}) = sum(eY.(c{1})(:).^2) / T;
+        M.MSE_events.(c{1}) = sum(eE.(c{1})(:).^2) / nEv;
     end
     M.MSE = sum(r.^2);
     % Spread response to the fiscal factor: DE does not load on it, so it is
