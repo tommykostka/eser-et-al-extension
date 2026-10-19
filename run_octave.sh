@@ -6,5 +6,5 @@
 # columns, fmincon with fixed bounds, optimizer iteration limits);
 # octave_noplot/ turns plotting into no-ops on machines without a display.
 cd "$(dirname "$0")"
-octave-cli -q --no-gui --eval "pkg load optim statistics io financial; addpath('octave_compat'); addpath('octave_noplot'); warning('off','all'); more off; save_default_options('-v7'); $1" 2>&1 \
+octave-cli -q --no-gui --eval "pkg load optim statistics io financial; addpath(fullfile(pwd, 'octave_compat')); addpath(fullfile(pwd, 'octave_noplot')); warning('off','all'); more off; save_default_options('-v7'); $1" 2>&1 \
   | grep -vE "JAVA_TOOL_OPTIONS|shadows a (core|built-in)|called from|PKG_ADD|load_packages|pkg at line"
