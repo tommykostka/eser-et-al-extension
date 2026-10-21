@@ -13,6 +13,7 @@ error when set up the same way.
 | `window` | estimation sample, e.g. `{'Mar2009','Dec2021'}` |
 | `base` | level/slope curve: `'DE'` (Bund yields) or `'OIS'` |
 | `pc` | `'pca_est'` (PCA on the estimation sample) or `'observable'` (1y, 10y–1y) |
+- optionally a floor on that loading, `minElasticity` (bp of spread per +10 pp of the fiscal factor);
 | `fiscal` | IT fiscal factor: `'ff_nom'` (unweighted free float, actual), `'ffgdp'` ((debt − Eurosystem holdings)/GDP), `'ff_nom_sim2015'` (March-2015 projection after Mar 2015) |
 | `big4` | big-4 free-float vintage: `'Dec-21'` (actual) or `'Mar-15'` |
 | `w` | weight on the yield fit (1 − w on the APP/PEPP fit) |
@@ -56,3 +57,14 @@ Inputs (not in the repository): `Input_mat/` (TS_ECB_DE/IT_Dec-2021, OIS, Surpri
 `Output_mat/StartingValues_ATSM_OIS.mat`, `Data/Free_Float.xlsx`, and the two workbooks the original
 scripts read from the P: drive. `spread_load_inputs.m` looks for those in `Data/` and
 `Data/Countrydata/` first, then at the original relative paths `../../` and `../Countrydata/`.
+
+## Preferred specifications (OIS anchor, sample Mar 2009 - Dec 2021)
+
+Both fit OIS rates and the IT-OIS spread (`target = 'spread'`); the fiscal factor is IT purchases / GDP (`ffgdp`).
+
+| Event | Run | Stage | Key settings | Event fit (5-10y RMSE) |
+|---|---|---|---|---|
+| PEPP | `GQ6_e40_w001_fromGP3` | `GQ` | PEPP only, w = 0.01, `minElasticity` 40 | OIS 0.8, IT-OIS 1.9, IT 1.4 bp |
+| APP | `HO2_w005_fromF08` | `HO` | APP only, w = 0.05 | OIS 0.6, IT-OIS 1.0 bp |
+
+`minElasticity` keeps the spread effect of +10 pp of the fiscal factor at or above the given number of bp at 5-10y; without it the PEPP-only fit settles near +20 bp (stage `GP`). Run stages F and G, then `GO`, `GP` and `GQ` (and F, then `HO`) in that order with `spread_run_stage`, since each stage warm-starts from earlier runs.

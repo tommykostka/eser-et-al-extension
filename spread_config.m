@@ -22,6 +22,7 @@ function cfg = spread_config(varargin)
     cfg.maxIntensity = Inf;                % optional cap on IT default intensity, per year (e.g. 0.10 = 10%)
     cfg.signConstraint = true;             % require IT-DE spread loading on the fiscal factor >= 0 at 5-10y
     cfg.penalty   = 1e2;                   % weight of the sign-constraint penalty
+    cfg.minElasticity = 0;                 % lower bound on the spread effect of +10 pp of the fiscal factor, bp, 5-10y
     cfg.optimizer = 'lm';                  % 'lm': lsqnonlin in MATLAB, nonlin_residmin in Octave; 'lsqnonlin' forces lsqnonlin
     cfg.maxIter   = 400;
     cfg.tol       = 1e-10;

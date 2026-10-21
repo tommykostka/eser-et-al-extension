@@ -64,7 +64,11 @@ function M = spread_model(x, S, cfg)
     % Spread response to the fiscal factor: DE does not load on it, so it is
     % IT's loading on factor 6 (decimal yield per unit of the factor), 5-10y.
     M.spreadLoading = M.BX.IT(6, 5:10);
-    M.violation = max(0, -M.spreadLoading);
+    % With cfg.minElasticity > 0 the loading must stay at or above that effect
+    % (bp of spread per +10 pp of the fiscal factor = 1000 * loading).
+    minL = 0;
+    if isfield(cfg, 'minElasticity'), minL = cfg.minElasticity / 1000; end
+    M.violation = max(0, minL - M.spreadLoading);
     if cfg.signConstraint
         r = [r; sqrt(cfg.penalty) * M.violation(:)];
     end
