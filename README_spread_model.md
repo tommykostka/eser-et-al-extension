@@ -13,7 +13,6 @@ error when set up the same way.
 | `window` | estimation sample, e.g. `{'Mar2009','Dec2021'}` |
 | `base` | level/slope curve: `'DE'` (Bund yields) or `'OIS'` |
 | `pc` | `'pca_est'` (PCA on the estimation sample) or `'observable'` (1y, 10y–1y) |
-- optionally a floor on that loading, `minElasticity` (bp of spread per +10 pp of the fiscal factor);
 | `fiscal` | IT fiscal factor: `'ff_nom'` (unweighted free float, actual), `'ffgdp'` ((debt − Eurosystem holdings)/GDP), `'ff_nom_sim2015'` (March-2015 projection after Mar 2015) |
 | `big4` | big-4 free-float vintage: `'Dec-21'` (actual) or `'Mar-15'` |
 | `w` | weight on the yield fit (1 − w on the APP/PEPP fit) |
@@ -22,6 +21,7 @@ error when set up the same way.
 
 Restrictions always enforced or available:
 - IT–DE spread loading on the fiscal factor ≥ 0 at 5–10y (`signConstraint`);
+- optionally a floor on that loading, `minElasticity` (bp of spread per +10 pp of the fiscal factor);
 - IT default intensity `Gamma_0 + Gamma_1'X_t` ≥ 0 in every month;
 - `Gamma_1` on the fiscal factor ≥ 0 (`fiscalGammaNonneg`, default on);
 - optional cap on the default intensity per year (`maxIntensity`).
