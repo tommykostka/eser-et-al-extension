@@ -123,18 +123,6 @@ function C = spread_stage_configs(stage)
                   [h {'name', 'H06_APP_restart', 'x0', jitter(xF06, 8)}] };
             C = cell(size(v));
             for k = 1:numel(v), C{k} = spread_config(v{k}{:}); end
-        case 'I'
-            % G (PEPP only) and H (APP only) setups with w = 0: no weight on the yield fit.
-            b = {'base', 'DE', 'pc', 'pca_est', 'big4', 'Dec-21', 'fiscal', 'ffgdp', 'window', {'Mar2009', 'Dec2021'}, ...
-                 'w', 0, 'gamma', 'all', 'fiscalGammaNonneg', true, 'maxIntensity', 0.10, 'signConstraint', true, ...
-                 'maxIter', 1500, 'penalty', 1e3, 'target', 'spread'};
-            xG01 = load_x('G01_PEPP_w005'); xF06 = load_x('F06_E06_spread_w005');
-            v = { [b {'name', 'I01_PEPP_w0_fromG01', 'events', {'PEPP'}, 'x0', xG01}], ...
-                  [b {'name', 'I02_APP_w0_fromG01',  'events', {'APP'},  'x0', xG01}], ...
-                  [b {'name', 'I03_PEPP_w0_fromF06', 'events', {'PEPP'}, 'x0', xF06}], ...
-                  [b {'name', 'I04_APP_w0_fromF06',  'events', {'APP'},  'x0', xF06}] };
-            C = cell(size(v));
-            for k = 1:numel(v), C{k} = spread_config(v{k}{:}); end
         otherwise
             error('spread_stage_configs: unknown stage %s', stage);
     end
