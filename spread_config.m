@@ -6,6 +6,7 @@ function cfg = spread_config(varargin)
     cfg.name      = '';                    % label used for output file names
     cfg.window    = {'Dec2009', 'Aug2014'};% estimation sample {start, end} as 'mmmyyyy'
     cfg.base      = 'DE';                  % level/slope curve shared by DE and IT: 'DE' (Bund yields) or 'OIS'
+    cfg.anchor    = 'DE';                  % risk-free curve priced alongside IT: 'DE' (Bunds) or 'OIS' (OIS rates; IT spreads over OIS)
     cfg.pc        = 'pca_est';             % level/slope: 'pca_est' (PCA on estimation sample) or 'observable' (1y, 10y-1y)
     cfg.big4      = 'Dec-21';              % big-4 free-float vintage: 'Dec-21' (actual data) or 'Mar-15' (2015 projection after Mar 2015)
     cfg.fiscal    = 'ff_nom';              % IT fiscal factor, see spread_prepare.m:

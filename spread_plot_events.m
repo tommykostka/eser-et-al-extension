@@ -6,6 +6,7 @@ function spread_plot_events(name, outFile)
     s = load(fullfile('Output_runs', [name '.mat'])); R = s.R;
     blue = [42 120 214]/255; orange = [235 104 52]/255;
     rowsC = {'DE', 'IT', 'SP'}; label = struct('DE', 'Germany', 'IT', 'Italy', 'SP', 'IT-DE spread');
+    if isfield(R.cfg, 'anchor') && strcmp(R.cfg.anchor, 'OIS'), label.DE = 'OIS'; label.SP = 'IT-OIS spread'; end
     evs = {'APP', 'PEPP'};
     if ~isfield(R.chart, 'SP')                       % runs saved before the spread was scored
         for e = 1:2

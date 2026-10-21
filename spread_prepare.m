@@ -8,10 +8,22 @@ function S = spread_prepare(cfg, raw)
     vMaturities_reg      = 60:12:120;                 % months, event reactions fitted
     sStart = cfg.window{1}; sEnd = cfg.window{2};
 
+    % anchor = 'OIS': the 'DE' block holds OIS rates (fitted without default risk),
+    % so Italy is modelled as a spread over OIS; the base curve is then OIS too.
+    anchor = 'DE'; if isfield(cfg, 'anchor'), anchor = cfg.anchor; end
+    if strcmp(anchor, 'OIS'), cfg.base = 'OIS'; end
+    S.anchor = anchor;
+
     %% Event-study targets (independent of the configuration)
     for ii = 1:2
         cty = countries{ii};
-        [S.obs.APP.(cty), S.obs.PEPP.(cty)] = event_changes(raw, cty, vMaturities_analysis);
+        if strcmp(cty, 'DE') && strcmp(anchor, 'OIS')
+            if ~isfield(raw, 'OISd'), error('spread_prepare: anchor OIS needs Data/OIS_rates_and_future_Spot_Curves.xlsx'); end
+            dd = raw.OISd.dates; yd = raw.OISd.rates;
+        else
+            dd = raw.TS.(cty).Data.nom.d.dates; yd = raw.TS.(cty).yields.d.nom(:, vMaturities_analysis);
+        end
+        [S.obs.APP.(cty), S.obs.PEPP.(cty)] = event_changes(raw, dd, yd);
     end
 
     %% Level/slope of the base curve
@@ -39,9 +51,16 @@ function S = spread_prepare(cfg, raw)
     %% Country blocks
     for ii = 1:2
         cty = countries{ii};
-        dm = raw.TS.(cty).Data.nom.m.dates; [j0, j1] = window_idx(dm, sStart, sEnd);
+        if strcmp(cty, 'DE') && strcmp(anchor, 'OIS')
+            dm = raw.OIS.MatlabDates; [j0, j1] = window_idx(dm, sStart, sEnd);
+            Y = raw.OIS.OIS_rates(j0:j1, 5:14);       % OIS 1y-10y
+            r = raw.OIS.OIS_rates(j0:j1, 1);          % 1-month OIS as the short rate
+        else
+            dm = raw.TS.(cty).Data.nom.m.dates; [j0, j1] = window_idx(dm, sStart, sEnd);
+            Y = raw.TS.(cty).yields.m.nom(j0:j1, vMaturities_analysis);
+            r = raw.TS.(cty).yields.m.nom(j0:j1, 1);
+        end
         if j1 - j0 + 1 ~= T, error('spread_prepare: sample length mismatch for %s', cty); end
-        Y = raw.TS.(cty).yields.m.nom(j0:j1, vMaturities_analysis);
         E.mats_TSfit = vMaturities_analysis / 12;
         E.mats_YCfit = vMaturities_reg / 12;
         E.Yields = Y; E.dt = 1/12;
@@ -57,7 +76,6 @@ function S = spread_prepare(cfg, raw)
         N = size(mX, 2);
 
         % Short rate on level/slope (quantity factors excluded)
-        r = raw.TS.(cty).yields.m.nom(j0:j1, 1);
         if N == 6, cols = [1 2 4 5]; else cols = [1 2]; end
         B = [ones(T,1) mX(:,cols)] \ r;
         rho1 = zeros(N,1); rho1(cols) = B(2:end);
@@ -131,28 +149,31 @@ function [i0, i1] = window_idx(d, sStart, sEnd)
     if isempty(i0) || isempty(i1), error('spread_prepare: window %s-%s not in data', sStart, sEnd); end
 end
 
-function [vAPP, vPEPP] = event_changes(raw, cty, mats)
+function [vAPP, vPEPP] = event_changes(raw, dd, yd)
 % APP: average of the standard and macro-surprise-controlled event regressions
-% (17 announcement dates, Sep 2014 - Mar 2015). PEPP: 18-20 Mar 2020 change.
+% (17 announcement dates, Sep 2014 - Mar 2015), on daily data from the last
+% trading day up to 31 Dec 2013 to 31 Mar 2015. PEPP: 18-20 Mar 2020 change.
+% dd: daily dates; yd: rates at 1..10y (one column per maturity).
     ev = {'04/09/2014', '12/09/2014', '24/09/2014', '25/09/2014', '02/10/2014', '10/10/2014', '24/10/2014', '06/11/2014', '17/11/2014', ...
           '21/11/2014', '27/11/2014', '04/12/2014', '02/01/2015', '08/01/2015', '14/01/2015', '22/01/2015', '05/03/2015'};
-    dd = raw.TS.(cty).Data.nom.d.dates; yd = raw.TS.(cty).yields.d.nom;
-    ds = cellstr(datestr(dd, 'dd/mm/yyyy'));
-    a = find(strcmp(ds, '31/12/2013')); b = find(strcmp(ds, '31/03/2015'));
+    a = find(dd <= datenum(2013, 12, 31), 1, 'last'); if isempty(a), a = 1; end
+    b = find(dd <= datenum(2015, 3, 31), 1, 'last');
     sel = dd(a+1:b);
-    dY = diff(yd(a:b, mats)); Y = dY(2:end, :);
+    dY = diff(yd(a:b, :)); Y = dY(2:end, :);
     X = zeros(numel(sel), numel(ev)); ss = cellstr(datestr(sel, 'dd/mm/yyyy'));
     for k = 1:numel(ev), X(strcmp(ss, ev{k}), k) = 1; end
     Xs = [X(2:end,:) X(1:end-1,:)];
     sd = raw.Surprise(:,1) + 693960;
-    M = raw.Surprise(ismember(sd, sel), 2:end); M(isnan(M)) = 0;
+    M = zeros(numel(sel), size(raw.Surprise, 2) - 1);       % macro surprises aligned to the trading days, 0 if none
+    [found, loc] = ismember(sel, sd);
+    M(found, :) = raw.Surprise(loc(found), 2:end); M(isnan(M)) = 0;
     Xc = [Xs M(2:end,:)];
     n = 2*numel(ev);
     bs = regress_cols(Y, Xs); bc = regress_cols(Y, Xc);
     vAPP = (sum(bs(1:n,:), 1) + sum(bc(1:n,:), 1)) / 2;
-    p0 = find(strcmp(cellstr(datestr(dd, 'dd-mmm-yyyy')), '18-Mar-2020'), 1, 'first');
-    p1 = find(strcmp(cellstr(datestr(dd, 'dd-mmm-yyyy')), '20-Mar-2020'), 1, 'last');
-    vPEPP = yd(p1, mats) - yd(p0, mats);
+    p0 = find(dd == datenum(2020, 3, 18), 1, 'first');
+    p1 = find(dd == datenum(2020, 3, 20), 1, 'last');
+    vPEPP = yd(p1, :) - yd(p0, :);
 end
 
 function B = regress_cols(Y, X)

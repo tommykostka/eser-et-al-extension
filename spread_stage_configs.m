@@ -123,6 +123,24 @@ function C = spread_stage_configs(stage)
                   [h {'name', 'H06_APP_restart', 'x0', jitter(xF06, 8)}] };
             C = cell(size(v));
             for k = 1:numel(v), C{k} = spread_config(v{k}{:}); end
+        case {'FO', 'GO', 'HO'}
+            % Stages F, G and H with OIS in place of the Bund curve: OIS rates are priced and
+            % fitted (levels and APP/PEPP reactions) and Italy is fitted as a spread over OIS.
+            o = {'anchor', 'OIS', 'base', 'OIS', 'pc', 'pca_est', 'big4', 'Dec-21', 'fiscal', 'ffgdp', 'window', {'Mar2009', 'Dec2021'}, ...
+                 'w', 0.05, 'gamma', 'all', 'fiscalGammaNonneg', true, 'maxIntensity', 0.10, 'signConstraint', true, ...
+                 'maxIter', 1500, 'penalty', 1e3, 'target', 'spread'};
+            xF08 = load_x('F08_E07_OIS_spread'); xG07 = load_x('G07_PEPP_OIS');
+            switch stage
+                case 'FO', ev = {'APP', 'PEPP'}; tag = 'FO';
+                case 'GO', ev = {'PEPP'};        tag = 'GO';
+                case 'HO', ev = {'APP'};         tag = 'HO';
+            end
+            v = { [o {'name', [tag '1_w010_fromF08'], 'events', ev, 'w', 0.10, 'x0', xF08}], ...
+                  [o {'name', [tag '2_w005_fromF08'], 'events', ev, 'x0', xF08}], ...
+                  [o {'name', [tag '3_w005_fromG07'], 'events', ev, 'x0', xG07}], ...
+                  [o {'name', [tag '4_w005_fresh'],   'events', ev}] };
+            C = cell(size(v));
+            for k = 1:numel(v), C{k} = spread_config(v{k}{:}); end
         otherwise
             error('spread_stage_configs: unknown stage %s', stage);
     end
