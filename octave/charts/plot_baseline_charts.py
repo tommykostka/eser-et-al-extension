@@ -1,6 +1,6 @@
 """Draws the baseline charts from the CSV files written by baseline_charts.m
 (for machines where Octave cannot render plots).
-usage: python3 octave/charts/plot_baseline_charts.py [Output_runs/baseline_charts]"""
+usage: python3 octave/charts/plot_baseline_charts.py [Output_figures]"""
 import csv, math, sys
 from collections import defaultdict
 from datetime import date
@@ -8,7 +8,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-D = sys.argv[1] if len(sys.argv) > 1 else "Output_runs/baseline_charts"
+D = sys.argv[1] if len(sys.argv) > 1 else "Output_figures"
 RUNS = ["PEPP_GQ3_e50_baseline", "PEPP_GR4_e50_baseline", "PEPP_GQ6_e40_baseline", "APP_HO2_baseline"]
 LAB = {"PEPP_GQ3_e50_baseline": "PEPP GQ3 (floor 50)", "PEPP_GR4_e50_baseline": "PEPP GR4 (floor 50)",
        "PEPP_GQ6_e40_baseline": "PEPP GQ6 (floor 40)", "APP_HO2_baseline": "APP HO2"}
@@ -69,7 +69,7 @@ def series(name, panels, title):
     finish(fig, title, "OIS anchor; monthly, in sample", h, l, name, 0.92)
 
 def elasticity():
-    rows = read("elasticity")
+    rows = read("baseline_fiscal_elasticity_1-10y")
     fig, ax = plt.subplots(figsize=(9, 5.6), facecolor=SURFACE); style(ax)
     for r in RUNS:
         sel = [x for x in rows if x["run"] == r]
@@ -77,10 +77,10 @@ def elasticity():
         ax.annotate(f"{float(sel[-1]['bp_per_10pp']):+.0f}", (10.15, float(sel[-1]["bp_per_10pp"])), color=COL[r], fontsize=9, va="center")
     ax.set_xticks(range(1, 11)); ax.set_xlim(0.7, 10.8); ax.set_xlabel("Maturity (years)"); ax.set_ylabel("bp")
     h, l = ax.get_legend_handles_labels()
-    finish(fig, "IT–OIS spread effect of +10 pp of the fiscal factor", "fiscal factor: IT purchases / GDP; PEPP baselines have a floor on the 5–10y effect", h, l, "elasticity", 0.86)
+    finish(fig, "IT–OIS spread effect of +10 pp of the fiscal factor", "fiscal factor: IT purchases / GDP; PEPP baselines have a floor on the 5–10y effect", h, l, "baseline_fiscal_elasticity_1-10y", 0.86)
 
-events("pepp_event", "PEPP"); events("app_event", "APP")
-series("yields", ["DE", "IT"], "Yield fit, Mar 2009 – Dec 2021")
-series("spread", ["SP"], "IT–OIS spread fit, Mar 2009 – Dec 2021")
+events("baseline_PEPP_reaction_fit_5-10y", "PEPP"); events("baseline_APP_reaction_fit_5-10y", "APP")
+series("baseline_yield_fit_OIS_IT_2009-2021", ["DE", "IT"], "Yield fit, Mar 2009 – Dec 2021")
+series("baseline_ITOIS_spread_fit_2009-2021", ["SP"], "IT–OIS spread fit, Mar 2009 – Dec 2021")
 elasticity()
 print("done")

@@ -4,10 +4,11 @@
 %   PEPP_GQ3_e50_baseline   floor 50 bp (search run GQ3, warm start GP7)
 %   PEPP_GR4_e50_baseline   floor 50 bp (search run GR4, warm start GQ6)
 %   PEPP_GQ6_e40_baseline   floor 40 bp (search run GQ6, warm start GP3)
-% The optimizer starts from the estimates of those search runs
-% (Output_mat/Baselines.mat) and is restarted until the fit stops improving;
-% reestimate = false only evaluates the stored estimates. Results go to
-% Output_runs/<name>.mat and <name>_chart.csv.
+% The optimizer starts from the stored estimates in Output_mat/Baselines.mat
+% (initially those of the search runs) and is restarted until the fit stops
+% improving; an improved estimate is written back to Baselines.mat, so each run
+% continues from the best one so far. reestimate = false only evaluates the
+% stored estimates. Results go to Output_runs/<name>.mat and <name>_chart.csv.
 reestimate = true;   % false: evaluate the stored estimates only
 rounds = 5;          % optimizer restarts, each from where the previous one stopped
 
@@ -24,4 +25,5 @@ for k = 1:numel(C)
         if r > 1 && R.MSE > mse * (1 - 1e-4), break; end
         mse = R.MSE; C{k}.x0 = R.x;
     end
+    spread_save_baseline(R);         % keep the estimate if it beats the stored one
 end

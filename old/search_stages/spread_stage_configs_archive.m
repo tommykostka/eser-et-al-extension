@@ -1,9 +1,10 @@
 function C = spread_stage_configs_archive(stage)
 % Archived search stages A-H, FO/GO/HO, GP, GQ and GR that led to the
-% baselines in spread_stage_configs.m. Stage B changes one setting at a
-% time from the Stage A starting point. Called by spread_stage_configs for
+% baselines in model/spread_stage_configs.m. Stage B changes one setting at
+% a time from the Stage A starting point. Called by spread_stage_configs for
 % any stage other than the baselines; warm starts come from Output_runs or
-% Output_runs/archive.
+% Output_runs/archive. Run from the repository root, e.g.
+%   addpath('model', 'old/search_stages'); spread_run_stage('GQ')
     base = {'name', 'A0_baseline', 'base', 'OIS', 'pc', 'pca_est', 'big4', 'Dec-21', 'fiscal', 'ff_nom', ...
             'window', {'Mar2009', 'Dec2021'}, 'w', 0.5, 'gamma', 'fiscal_only', 'signConstraint', true};
     switch stage

@@ -7,9 +7,10 @@ default risk and a fiscal factor), fitted to the yield reactions to APP and PEPP
 
 All use the OIS anchor (OIS rates priced in place of Bunds, Italy fitted as a spread over OIS),
 the sample Mar 2009 - Dec 2021, the fiscal factor IT purchases / GDP (`ffgdp`) and the
-restrictions listed below. The scripts re-optimise each baseline, starting from the search-run
-estimate stored in `Output_mat/Baselines.mat` and restarting the optimizer until the fit stops
-improving. The table shows the re-optimised results (Octave; MATLAB's `lsqnonlin` may end at
+restrictions listed below. The scripts re-optimise each baseline, starting from the estimate
+stored in `Output_mat/Baselines.mat` and restarting the optimizer until the fit stops improving;
+an improved estimate is written back to `Baselines.mat`, so every run continues from the best
+estimate so far. The table shows the re-optimised results (Octave; MATLAB's `lsqnonlin` may end at
 slightly different values).
 
 | Run | Fitted to | Yield weight | Fiscal-elasticity floor | Event fit, 5-10y RMSE (OIS / IT-OIS / IT) | +10 pp fiscal factor, IT-OIS at 1 / 5 / 10y |
@@ -25,35 +26,34 @@ Run from the repository root (MATLAB):
 |---|---|
 | `baseline_PEPP.m` | re-optimises the three PEPP baselines; results in `Output_runs/<name>.mat` and `<name>_chart.csv` |
 | `baseline_APP.m` | re-optimises the APP baseline |
-| `baseline_charts.m` | main charts (PNG, plus the plotted data as CSV) in `Output_runs/baseline_charts/`: PEPP and APP reactions (OIS, IT-OIS spread, Italy), yield fit (OIS and Italy, 2/5/10y), IT-OIS spread fit and the fiscal elasticity by maturity |
+| `baseline_charts.m` | main charts in `Output_figures/` (PNG, plus the plotted data as CSV of the same name): PEPP and APP reactions (OIS, IT-OIS spread, Italy), yield fit (OIS and Italy, 2/5/10y), IT-OIS spread fit and the fiscal elasticity by maturity |
 
-Re-optimising leaves GQ3, GQ6 and HO2 where the search left them; GR4 improves from
-2.3 / 2.8 / 4.0 bp. With `reestimate = false` the scripts only evaluate the stored estimates.
+Re-optimising left GQ3, GQ6 and HO2 where the search left them and improved GR4 from
+2.3 / 2.8 / 4.0 bp; `Baselines.mat` holds these re-optimised estimates. With
+`reestimate = false` the scripts only evaluate the stored estimates.
 
-Requires the Optimization Toolbox (`lsqnonlin`) and the Statistics and Machine Learning
-Toolbox (`mvregress`, `regress`). The OIS anchor needs the daily OIS spot curves in
-`Data/OIS_rates_and_future_Spot_Curves.xlsx` (sheet "OIS curves FAME"), which are not in
-the repository.
+Requires the Optimization Toolbox (`lsqnonlin`). The OIS anchor uses the daily OIS spot curves in
+`Data/OIS_rates_and_future_Spot_Curves.xlsx` (sheet "OIS curves FAME") for the event reactions.
 
 ## Layout
 
+Only the code the baselines use is kept outside `old/`:
+
 - `baseline_*.m`: the three scripts above.
-- `model/`: the model code. `spread_config.m` (settings), `spread_load_inputs.m` (reads and
-  caches the inputs), `spread_prepare.m` (factors, VAR, event targets), `spread_model.m`
-  (pricing and residuals), `spread_estimate.m` (estimation and scores),
-  `spread_stage_configs.m` (baseline configurations), `spread_baseline_series.m` and
-  `spread_chart.m` (charts), and the drivers for search stages (`spread_run_stage.m`,
-  `spread_run_batch.m`, `spread_summarize.m`, `spread_plot_*.m`, `spread_evaluate_window.m`).
-- `Functions/`: term-structure functions of the original code (`Functions/fast/` holds
-  vectorised versions of the yield-impact functions).
-- `Archive/spread_stages/`: the search stages (A-H, FO/GO/HO, GP, GQ, GR) that led to the
-  baselines; `spread_run_stage('GQ')` etc. still runs them. Their warm starts are read
-  from `Output_runs/` or `Output_runs/archive/`.
-- `Archive/original_scripts/`: the original estimation scripts (`Estimates_spread*.m`,
-  `Estimate_*.m`, ...); run them from the repository root with that folder on the path.
+- `model/`: `spread_config.m` (settings), `spread_load_inputs.m` (reads and caches the inputs),
+  `spread_prepare.m` (factors, VAR, event targets), `spread_model.m` (pricing and residuals),
+  `spread_estimate.m` (estimation and scores), `spread_stage_configs.m` (baseline
+  configurations), `spread_save_baseline.m` (keeps improved estimates),
+  `spread_baseline_series.m` and `spread_chart.m` (charts).
+- `Functions/`: the four pricing recursions the model uses and, in `Functions/fast/`, the
+  vectorised yield-impact functions.
+- `Data/`, `Input_mat/`, `Output_mat/`: inputs, starting values and the baseline estimates
+  (`Output_mat/Baselines.mat`).
 - `octave/`: optional, to run the same code in GNU Octave (`octave/run_octave.sh`);
   `octave/charts/plot_baseline_charts.py` draws the baseline charts from their CSV files where
   Octave cannot render plots.
+- `old/`: everything not used by the baselines (original scripts, search stages, unused
+  functions); see `old/README.md`.
 
 ## Settings (`model/spread_config.m`)
 
@@ -91,6 +91,7 @@ addpath('model'); addpath(genpath('Functions'));
 raw = spread_load_inputs();
 R = spread_estimate(spread_config('name', 'my_run', 'anchor', 'OIS', 'base', 'OIS', 'fiscal', 'ffgdp', ...
                                   'events', {'PEPP'}, 'w', 0.01, 'minElasticity', 50), raw);
-spread_plot_events('my_run', 'Output_runs/my_run_events.png');
-spread_run_stage('GQ');                                        % an archived search stage
 ```
+
+The search stages that led to the baselines, and their run and plot tools, are in
+`old/search_stages/` (e.g. `addpath('old/search_stages'); spread_run_stage('GQ')`).

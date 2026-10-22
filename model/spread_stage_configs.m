@@ -6,7 +6,7 @@ function C = spread_stage_configs(stage)
 %   'APP_baseline'   APP-only fit
 % Each starts from its own estimate in Output_mat/Baselines.mat, so a rerun
 % reproduces it. Any other stage name is passed to the archived search
-% stages in Archive/spread_stages (spread_stage_configs_archive.m).
+% stages in old/search_stages (spread_stage_configs_archive.m).
     o = {'anchor', 'OIS', 'base', 'OIS', 'pc', 'pca_est', 'big4', 'Dec-21', 'fiscal', 'ffgdp', 'window', {'Mar2009', 'Dec2021'}, ...
          'gamma', 'all', 'fiscalGammaNonneg', true, 'maxIntensity', 0.10, 'signConstraint', true, ...
          'maxIter', 3000, 'penalty', 1e3, 'target', 'spread'};
@@ -21,7 +21,7 @@ function C = spread_stage_configs(stage)
         case 'PEPP_baseline', v = pepp;
         case 'APP_baseline',  v = app;
         otherwise
-            addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'Archive', 'spread_stages'));
+            addpath(fullfile(fileparts(mfilename('fullpath')), '..', 'old', 'search_stages'));
             C = spread_stage_configs_archive(stage);
             return;
     end

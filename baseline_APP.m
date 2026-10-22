@@ -1,10 +1,11 @@
 % APP baseline: OIS anchor, sample Mar 2009 - Dec 2021, fitted to the APP
 % reaction (OIS and IT-OIS spread, 5-10y) with yield weight w = 0.05:
 %   APP_HO2_baseline   (search run HO2, warm start F08)
-% The optimizer starts from the estimate of that search run
-% (Output_mat/Baselines.mat) and is restarted until the fit stops improving;
-% reestimate = false only evaluates the stored estimate. Results go to
-% Output_runs/<name>.mat and <name>_chart.csv.
+% The optimizer starts from the stored estimate in Output_mat/Baselines.mat
+% (initially those of the search runs) and is restarted until the fit stops
+% improving; an improved estimate is written back to Baselines.mat, so each run
+% continues from the best one so far. reestimate = false only evaluates the
+% stored estimate. Results go to Output_runs/<name>.mat and <name>_chart.csv.
 reestimate = true;   % false: evaluate the stored estimates only
 rounds = 5;          % optimizer restarts, each from where the previous one stopped
 
@@ -21,4 +22,5 @@ for k = 1:numel(C)
         if r > 1 && R.MSE > mse * (1 - 1e-4), break; end
         mse = R.MSE; C{k}.x0 = R.x;
     end
+    spread_save_baseline(R);         % keep the estimate if it beats the stored one
 end
