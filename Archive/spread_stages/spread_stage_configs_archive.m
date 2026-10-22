@@ -1,6 +1,9 @@
-function C = spread_stage_configs(stage)
-% Configurations for each search stage. Stage B changes one setting at a
-% time from the Stage A baseline.
+function C = spread_stage_configs_archive(stage)
+% Archived search stages A-H, FO/GO/HO, GP, GQ and GR that led to the
+% baselines in spread_stage_configs.m. Stage B changes one setting at a
+% time from the Stage A starting point. Called by spread_stage_configs for
+% any stage other than the baselines; warm starts come from Output_runs or
+% Output_runs/archive.
     base = {'name', 'A0_baseline', 'base', 'OIS', 'pc', 'pca_est', 'big4', 'Dec-21', 'fiscal', 'ff_nom', ...
             'window', {'Mar2009', 'Dec2021'}, 'w', 0.5, 'gamma', 'fiscal_only', 'signConstraint', true};
     switch stage
@@ -187,14 +190,17 @@ function C = spread_stage_configs(stage)
             C = cell(size(v));
             for k = 1:numel(v), C{k} = spread_config(v{k}{:}); end
         otherwise
-            error('spread_stage_configs: unknown stage %s', stage);
+            error('spread_stage_configs_archive: unknown stage %s', stage);
     end
 end
 
 function x = load_x(name)
 % Warm start from an earlier run; empty (default starting values) if that run is not available.
-    f = fullfile('Output_runs', [name '.mat']);
-    if exist(f, 'file'), s = load(f); x = s.R.x; else x = []; end
+    x = [];
+    for d = {'Output_runs', fullfile('Output_runs', 'archive')}
+        f = fullfile(d{1}, [name '.mat']);
+        if exist(f, 'file'), s = load(f); x = s.R.x; return; end
+    end
 end
 
 function x = jitter(x, seed)

@@ -28,7 +28,9 @@ function R = spread_estimate(cfg, raw)
     % ---- bounded least squares on the free parameters ----
     % MATLAB: lsqnonlin (Optimization Toolbox). Octave: nonlin_residmin (optim package).
     z0 = x0(free);
-    if exist('OCTAVE_VERSION', 'builtin') && ~strcmp(cfg.optimizer, 'lsqnonlin')
+    if cfg.maxIter == 0                         % evaluate the starting values only
+        z = z0; info.exitflag = 0; info.iterations = 0;
+    elseif exist('OCTAVE_VERSION', 'builtin') && ~strcmp(cfg.optimizer, 'lsqnonlin')
         opts = optimset('lbound', lb(free), 'ubound', ub(free), 'MaxIter', cfg.maxIter, 'TolFun', cfg.tol);
         [z, ~, cvg, outp] = nonlin_residmin(resid, z0, opts);
         info.exitflag = cvg; info.iterations = outp.niter;

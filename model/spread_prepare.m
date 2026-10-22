@@ -35,6 +35,7 @@ function S = spread_prepare(cfg, raw)
         baseY = raw.TS.DE.yields.m.nom(i0:i1, vMaturities_analysis);
     end
     [cP_base, S.W.base] = level_slope(baseY, cfg.pc);
+    S.dates = d(i0:i1);                                % month-end dates of the sample
     T = size(cP_base, 1);
 
     %% Quantity factors
